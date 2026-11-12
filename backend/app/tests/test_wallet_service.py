@@ -6,13 +6,36 @@ import pytest
 from sqlalchemy import select
 
 from app.core.errors import DomainError
+from app.modules.auth.models import User
 from app.modules.payments.errors import PaymentConflictError
-from app.modules.wallet.models import Wallet, WalletJournal
+from app.modules.wallet.models import Wallet, WalletJournal, WalletTopup
 from app.modules.wallet.service import (
     WALLET_TOPUP_LATE_PAYMENT_GRACE_SECONDS,
     WalletLedger,
 )
 from app.tests.test_payment_service import DOSSIER_ID, _service, _webhook
+
+
+def test_test_accounts_cannot_create_real_wallet_topups() -> None:
+    async def exercise() -> None:
+        service, sessions, engine, owner = await _service()
+        try:
+            async with sessions() as session, session.begin():
+                user = await session.get(User, owner.user_id)
+                assert user is not None
+                user.is_test_account = True
+            with pytest.raises(DomainError) as error:
+                await service.wallet_service().topup(
+                    owner.user_id, 50_000, "test-account-topup"
+                )
+            assert error.value.code == "TEST_ACCOUNT_WALLET_DISABLED"
+            async with sessions() as session:
+                assert await session.scalar(select(WalletTopup.id)) is None
+        finally:
+            await service.close()
+            await engine.dispose()
+
+    asyncio.run(exercise())
 
 
 def test_topup_preserves_qr_when_provider_status_omits_checkout_details() -> None:

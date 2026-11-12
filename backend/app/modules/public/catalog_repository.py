@@ -64,6 +64,15 @@ def _as_utc(value: datetime) -> datetime:
     return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
 
 
+def _exclude_test_dossiers() -> ColumnElement[bool]:
+    return ~exists(
+        select(1).where(
+            Dossier.id == PublicWork.dossier_id,
+            Dossier.is_test.is_(True),
+        )
+    )
+
+
 @dataclass(frozen=True, slots=True)
 class PublicWorkBackfillSource:
     dossier: Dossier
@@ -227,6 +236,7 @@ class PublicWorkRepository:
     async def find_published_public_id(self, slug: str) -> UUID | None:
         statement = select(PublicWork.id).where(
             PublicWork.slug == slug,
+            _exclude_test_dossiers(),
             PublicWork.publication_status == PublicationStatus.PUBLISHED,
             PublicWork.visibility == PublicWorkVisibility.PUBLIC,
             PublicWork.deleted_at.is_(None),
@@ -379,6 +389,7 @@ class PublicWorkRepository:
             select(PublicWork.id)
             .where(
                 PublicWork.publication_status == PublicationStatus.PENDING_PUBLICATION,
+                _exclude_test_dossiers(),
                 PublicWork.scheduled_publish_at.is_not(None),
                 PublicWork.scheduled_publish_at <= now,
                 PublicWork.deleted_at.is_(None),
@@ -498,6 +509,7 @@ class PublicWorkRepository:
         now: datetime,
     ) -> tuple[tuple[PublicWorkListRow, ...], int]:
         filters = [
+            _exclude_test_dossiers(),
             PublicWork.publication_status == PublicationStatus.PUBLISHED,
             PublicWork.visibility == PublicWorkVisibility.PUBLIC,
             PublicWork.deleted_at.is_(None),
@@ -650,6 +662,7 @@ class PublicWorkRepository:
             .select_from(PublicWork)
             .where(
                 PublicWork.id.in_(work_ids),
+                _exclude_test_dossiers(),
                 PublicWork.publication_status == PublicationStatus.PUBLISHED,
                 PublicWork.visibility == PublicWorkVisibility.PUBLIC,
                 PublicWork.deleted_at.is_(None),
@@ -685,6 +698,7 @@ class PublicWorkRepository:
                 )
                 .where(
                     PublicWork.id == work_id,
+                    _exclude_test_dossiers(),
                     PublicWork.deleted_at.is_(None),
                 )
             )
@@ -735,6 +749,7 @@ class PublicWorkRepository:
                 .join(Category, Category.id == PublicWork.category_id)
                 .where(
                     PublicWork.id != work_id,
+                    _exclude_test_dossiers(),
                     PublicWork.publication_status == PublicationStatus.PUBLISHED,
                     PublicWork.visibility == PublicWorkVisibility.PUBLIC,
                     PublicWork.published_at.is_not(None),
@@ -796,6 +811,7 @@ class PublicWorkRepository:
             .select_from(PublicWork)
             .join(Category, Category.id == PublicWork.category_id)
             .where(
+                _exclude_test_dossiers(),
                 PublicWork.publication_status == PublicationStatus.PUBLISHED,
                 PublicWork.visibility == PublicWorkVisibility.PUBLIC,
                 PublicWork.published_at.is_not(None),
@@ -819,6 +835,7 @@ class PublicWorkRepository:
                     select(PublicWork)
                     .join(Category, Category.id == PublicWork.category_id)
                     .where(
+                        _exclude_test_dossiers(),
                         PublicWork.publication_status == PublicationStatus.PUBLISHED,
                         PublicWork.visibility == PublicWorkVisibility.PUBLIC,
                         PublicWork.published_at.is_not(None),

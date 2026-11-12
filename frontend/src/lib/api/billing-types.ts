@@ -8,6 +8,7 @@ export type FeeObligationStatus =
 export interface FeeObligation {
   id: string;
   dossierId: string;
+  isTest?: boolean;
   serviceCode: string;
   description: string;
   amountMinor: number;
@@ -28,7 +29,7 @@ export type FeePolicyStatus =
 export interface AdminFeePolicy {
   id: string;
   feeType: string;
-  dossierTypeId: string;
+  dossierTypeId: string | null;
   versionNo: number;
   amountMinor: number;
   currency: string;

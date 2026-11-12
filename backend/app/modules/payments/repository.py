@@ -126,14 +126,17 @@ class PaymentRepository:
     async def list_reconcilable(self, *, limit: int) -> tuple[PaymentOrder, ...]:
         rows = await self._session.scalars(
             select(PaymentOrder)
+            .join(Dossier, Dossier.id == PaymentOrder.dossier_id)
             .where(
+                PaymentOrder.is_test.is_(False),
+                Dossier.is_test.is_(False),
                 or_(
                     PaymentOrder.status == PaymentStatus.PROCESSING,
                     and_(
                         PaymentOrder.status == PaymentStatus.PENDING,
                         PaymentOrder.provider_order_id.is_not(None),
                     ),
-                )
+                ),
             )
             .order_by(PaymentOrder.updated_at.asc())
             .limit(limit)
@@ -165,13 +168,31 @@ class PaymentRepository:
         *,
         status: PaymentStatus | None,
         limit: int,
+        test_mode: str = "REAL",
     ) -> tuple[tuple[PaymentOrder, str, str], ...]:
-        statement = select(PaymentOrder, Dossier.code, Dossier.title).join(
-            Dossier,
-            Dossier.id == PaymentOrder.dossier_id,
+        owner = aliased(User, name="payment_applicant")
+        statement = (
+            select(PaymentOrder, Dossier.code, Dossier.title)
+            .join(
+                Dossier,
+                Dossier.id == PaymentOrder.dossier_id,
+            )
+            .join(owner, owner.id == Dossier.owner_user_id)
         )
         if status is not None:
             statement = statement.where(PaymentOrder.status == status)
+        if test_mode == "REAL":
+            statement = statement.where(
+                PaymentOrder.is_test.is_(False),
+                Dossier.is_test.is_(False),
+                owner.is_test_account.is_(False),
+            )
+        elif test_mode == "TEST":
+            statement = statement.where(
+                PaymentOrder.is_test.is_(True),
+                Dossier.is_test.is_(True),
+                owner.is_test_account.is_(True),
+            )
         rows = await self._session.execute(
             statement.order_by(
                 PaymentOrder.created_at.desc(), PaymentOrder.id.desc()
@@ -186,6 +207,7 @@ class PaymentRepository:
         created_from: datetime | None,
         created_to: datetime | None,
         query: str | None,
+        test_mode: str = "REAL",
         offset: int = 0,
         limit: int | None = 50,
     ) -> tuple[tuple[tuple[Any, ...], ...], int, dict[str, int], int, int]:
@@ -211,6 +233,7 @@ class PaymentRepository:
             query=query,
             owner=owner,
             initiator=initiator,
+            test_mode=test_mode,
         )
         statement = statement.where(*filters).order_by(
             PaymentOrder.created_at.desc(), PaymentOrder.id.desc()
@@ -311,8 +334,25 @@ class PaymentRepository:
         query: str | None,
         owner: Any,
         initiator: Any,
+        test_mode: str = "REAL",
     ) -> tuple[Any, ...]:
         filters: list[object] = []
+        if test_mode == "REAL":
+            filters.extend(
+                (
+                    PaymentOrder.is_test.is_(False),
+                    Dossier.is_test.is_(False),
+                    owner.is_test_account.is_(False),
+                )
+            )
+        elif test_mode == "TEST":
+            filters.extend(
+                (
+                    PaymentOrder.is_test.is_(True),
+                    Dossier.is_test.is_(True),
+                    owner.is_test_account.is_(True),
+                )
+            )
         if status is not None:
             filters.append(PaymentOrder.status == status)
         if created_from is not None:

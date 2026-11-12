@@ -1,21 +1,29 @@
 import logging
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID, uuid4, uuid5
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import DomainError
+from app.db.outbox import OutboxEvent
 from app.modules.audit.service import AuditService
 from app.modules.auth.authorization import AuthorizationPolicy, PolicyRequirement
-from app.modules.auth.repositories import AuthRepository
+from app.modules.auth.repositories import AuthRepository, OutboxRepository
+from app.modules.auth.security import OutboxPayloadCipher
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.billing.models import FeeObligationStatus
 from app.modules.billing.repository import BillingRepository
 from app.modules.billing.types import FeeObligationView
-from app.modules.dossiers.models import Dossier, DossierStatus, DossierStatusHistory
+from app.modules.dossiers.canonical import snapshot_sha256
+from app.modules.dossiers.models import (
+    Dossier,
+    DossierStatus,
+    DossierStatusHistory,
+    DossierVersion,
+)
 from app.modules.dossiers.repository import DossierRepository
 from app.modules.dossiers.workflow import DossierWorkflowService
 from app.modules.notifications.models import Notification
@@ -99,6 +107,7 @@ class PaymentService:
         currency: str,
         order_ttl_seconds: int,
         enqueue_certificate_issue: Callable[[UUID], None] | None = None,
+        payload_cipher: OutboxPayloadCipher | None = None,
         clock: Callable[[], datetime] | None = None,
         uuid_factory: Callable[[], UUID] | None = None,
     ) -> None:
@@ -113,6 +122,7 @@ class PaymentService:
         self._currency = currency.upper()
         self._order_ttl = timedelta(seconds=order_ttl_seconds)
         self._enqueue_certificate_issue = enqueue_certificate_issue
+        self._payload_cipher = payload_cipher
         self._clock = clock or (lambda: datetime.now(UTC))
         self._uuid_factory = uuid_factory or uuid4
         self._payments = PaymentRepository(session)
@@ -121,6 +131,7 @@ class PaymentService:
         self._audit_service = AuditService(session)
         self._dossiers = DossierRepository(session)
         self._workflow = DossierWorkflowService(self._dossiers)
+        self._outbox = OutboxRepository(session)
 
     @property
     def provider_name(self) -> str:
@@ -146,6 +157,10 @@ class PaymentService:
             # Wallet spending is always by the owner, never staff on their behalf.
             if dossier.owner_user_id != principal.user_id:
                 raise PaymentForbiddenError()
+            if dossier.is_test or order.is_test or order.provider == "test":
+                raise PaymentConflictError(
+                    "TEST payments must use the simulation action."
+                )
             if order.status is PaymentStatus.PAID:
                 if (
                     order.provider != "wallet"
@@ -175,7 +190,7 @@ class PaymentService:
                 )
             self._workflow.transition(
                 dossier,
-                target=self._confirmed_dossier_status(dossier),
+                target=await self._confirmed_dossier_status(dossier),
                 actor_user_id=principal.user_id,
                 allowed_sources={DossierStatus.PAYMENT_PENDING},
                 reason_code="WALLET_PAYMENT_CONFIRMED",
@@ -204,12 +219,85 @@ class PaymentService:
             self._enqueue_certificate_issue(result.dossier_id)
         return result
 
+    async def simulate_test_payment(
+        self,
+        principal: AuthPrincipal,
+        order_id: UUID,
+        *,
+        outcome: Literal["SUCCESS", "FAILURE"],
+    ) -> PaymentOrderView:
+        if not principal.is_test_account:
+            raise PaymentForbiddenError()
+        self._require_role(principal, PAYMENT_ROLES)
+        async with self._session.begin():
+            order = await self._required_order(order_id, for_update=True)
+            dossier = await self._required_dossier(order.dossier_id, for_update=True)
+            if (
+                not dossier.is_test
+                or not order.is_test
+                or order.provider != "test"
+                or dossier.owner_user_id != principal.user_id
+            ):
+                raise PaymentForbiddenError()
+            if order.status is not PaymentStatus.PENDING:
+                raise PaymentConflictError(
+                    "Only a pending TEST payment can be simulated."
+                )
+            now = self._clock()
+            order.metadata_json = {
+                **order.metadata_json,
+                "testSimulationOutcome": outcome,
+                "testSimulationAt": now.isoformat(),
+            }
+            if outcome == "SUCCESS":
+                self._workflow.transition(
+                    dossier,
+                    target=await self._confirmed_dossier_status(dossier),
+                    actor_user_id=principal.user_id,
+                    allowed_sources={DossierStatus.PAYMENT_PENDING},
+                    reason_code="TEST_PAYMENT_SIMULATED_SUCCESS",
+                )
+                order.paid_at = now
+                self._transition_status(
+                    order,
+                    PaymentStatus.PAID,
+                    source="TEST_SIMULATION",
+                    actor=principal.user_id,
+                )
+                await self._settle_fee_obligation(order)
+                await self._add_paid_notification(
+                    dossier,
+                    order,
+                    source_event_id=uuid5(order.id, "test-payment-success"),
+                )
+            else:
+                self._transition_status(
+                    order,
+                    PaymentStatus.FAILED,
+                    source="TEST_SIMULATION",
+                    actor=principal.user_id,
+                )
+            self._audit(
+                "payment.test.simulated",
+                order.id,
+                user_id=principal.user_id,
+                outcome=outcome,
+            )
+            await self._session.flush()
+            await self._session.refresh(order)
+            return self._view(order)
+
     async def _ensure_checkout(
         self, order_id: UUID, *, newly_reserved: bool = False
     ) -> PaymentOrderView:
         """Resolve a durable reservation using the same provider order code."""
         async with self._session.begin():
             order = await self._required_order(order_id, for_update=True)
+            dossier = await self._required_dossier(order.dossier_id)
+            if order.is_test or dossier.is_test or order.provider == "test":
+                raise PaymentConflictError(
+                    "TEST payments cannot be sent to an external provider."
+                )
             if order.provider == "wallet":
                 return self._view(order)
             if (
@@ -301,16 +389,21 @@ class PaymentService:
                 await self._require_access(principal, dossier)
                 if replay.dossier_id != dossier_id:
                     raise PaymentConflictError("Idempotency key is already in use.")
+                if dossier.is_test or replay.is_test:
+                    raise PaymentConflictError(
+                        "TEST dossiers cannot use real payment orders."
+                    )
                 replay_id = replay.id
             else:
                 dossier = await self._required_dossier(dossier_id, for_update=True)
                 await self._require_access(principal, dossier)
                 if (
-                    dossier.submission_fee_required
+                    dossier.is_test
+                    or dossier.submission_fee_required
                     or dossier.status is not DossierStatus.APPROVED
                 ):
                     raise PaymentConflictError(
-                        "Only an approved dossier can create a payment order."
+                        "Only an approved non-TEST dossier can create a payment order."
                     )
                 if await self._payments.get_active_for_dossier(dossier.id):
                     raise PaymentConflictError(
@@ -525,11 +618,12 @@ class PaymentService:
         async with self._session.begin():
             dossier = await self._required_dossier(dossier_id, for_update=True)
             if (
-                dossier.submission_fee_required
+                dossier.is_test
+                or dossier.submission_fee_required
                 or dossier.status is not DossierStatus.APPROVED
             ):
                 raise PaymentConflictError(
-                    "Only an approved dossier can receive a payment request."
+                    "Only an approved non-TEST dossier can receive a payment request."
                 )
             if await self._payments.get_active_for_dossier(dossier.id):
                 raise PaymentConflictError(
@@ -604,7 +698,7 @@ class PaymentService:
             else:
                 self._workflow.transition(
                     dossier,
-                    target=self._confirmed_dossier_status(dossier),
+                    target=await self._confirmed_dossier_status(dossier),
                     actor_user_id=principal.user_id,
                     allowed_sources={DossierStatus.PAYMENT_PENDING},
                     reason_code="ADMIN_FEE_WALLET_PAYMENT",
@@ -658,6 +752,10 @@ class PaymentService:
             order = await self._required_order(order_id, for_update=True)
             dossier = await self._required_dossier(order.dossier_id)
             await self._require_access(principal, dossier)
+            if order.is_test or dossier.is_test or order.provider == "test":
+                raise PaymentConflictError(
+                    "TEST payments cannot be sent to an external provider."
+                )
             if order.provider == "wallet":
                 raise PaymentConflictError(
                     "This payment request uses the personal wallet."
@@ -735,6 +833,7 @@ class PaymentService:
                         select(Dossier)
                         .where(
                             Dossier.status == DossierStatus.APPROVED,
+                            Dossier.is_test.is_(False),
                             Dossier.deleted_at.is_(None),
                         )
                         .order_by(Dossier.updated_at.desc(), Dossier.id.desc())
@@ -758,6 +857,7 @@ class PaymentService:
         *,
         status: PaymentStatus | None,
         limit: int = 50,
+        test_mode: Literal["REAL", "TEST", "ALL"] = "REAL",
     ) -> tuple[AdminPaymentOrderView, ...]:
         if not (
             AuthorizationPolicy.allows_capability(
@@ -771,7 +871,9 @@ class PaymentService:
         if not 1 <= limit <= 100:
             raise ValueError("Payment order list limit is invalid.")
         async with self._session.begin():
-            rows = await self._payments.list_for_admin(status=status, limit=limit)
+            rows = await self._payments.list_for_admin(
+                status=status, limit=limit, test_mode=test_mode
+            )
         return tuple(
             AdminPaymentOrderView(
                 order=self._view(order),
@@ -791,6 +893,7 @@ class PaymentService:
         query: str | None,
         page: int,
         page_size: int,
+        test_mode: Literal["REAL", "TEST", "ALL"] = "REAL",
     ) -> tuple[AdminPaymentHistoryPageView, int]:
         AuthorizationPolicy.require_capability(
             principal, PAYMENT_HISTORY_READ_REQUIREMENT, PaymentForbiddenError
@@ -812,6 +915,7 @@ class PaymentService:
                 created_from=created_from,
                 created_to=created_to,
                 query=normalized_query,
+                test_mode=test_mode,
                 offset=(page - 1) * page_size,
                 limit=page_size,
             )
@@ -862,6 +966,7 @@ class PaymentService:
         created_from: datetime | None,
         created_to: datetime | None,
         query: str | None,
+        test_mode: Literal["REAL", "TEST", "ALL"] = "REAL",
     ) -> tuple[AdminPaymentHistoryRowView, ...]:
         AuthorizationPolicy.require_capability(
             principal, PAYMENT_HISTORY_EXPORT_REQUIREMENT, PaymentForbiddenError
@@ -875,6 +980,7 @@ class PaymentService:
                 created_from=created_from,
                 created_to=created_to,
                 query=normalized_query,
+                test_mode=test_mode,
                 limit=None,
             )
         return tuple(self._history_row(row) for row in rows)
@@ -967,7 +1073,7 @@ class PaymentService:
 
             self._workflow.transition(
                 dossier,
-                target=self._confirmed_dossier_status(dossier),
+                target=await self._confirmed_dossier_status(dossier),
                 actor_user_id=principal.user_id,
                 allowed_sources={DossierStatus.APPROVED},
                 reason_code="PAYMENT_WAIVED",
@@ -1198,6 +1304,7 @@ class PaymentService:
             return FeeObligationView(
                 id=obligation.id,
                 dossier_id=obligation.dossier_id,
+                is_test=obligation.is_test,
                 owner_user_id=obligation.owner_user_id,
                 price_catalog_version_id=obligation.price_catalog_version_id,
                 price_catalog_entry_id=obligation.price_catalog_entry_id,
@@ -1296,7 +1403,7 @@ class PaymentService:
                     )
                     self._workflow.transition(
                         dossier,
-                        target=self._confirmed_dossier_status(dossier),
+                        target=await self._confirmed_dossier_status(dossier),
                         actor_user_id=dossier.owner_user_id,
                         allowed_sources={DossierStatus.PAYMENT_PENDING},
                         reason_code="PAYMENT_WEBHOOK_CONFIRMED",
@@ -1418,6 +1525,9 @@ class PaymentService:
         should_issue = False
         async with self._session.begin():
             order = await self._required_order(order_id)
+            dossier = await self._required_dossier(order.dossier_id)
+            if order.is_test or dossier.is_test or order.provider == "test":
+                raise PaymentConflictError("TEST payments cannot be reconciled.")
             if order.status is PaymentStatus.PAID or order.provider == "wallet":
                 return self._view(order), False
             provider_order_id = order.provider_order_id or order.order_code
@@ -1483,7 +1593,7 @@ class PaymentService:
                     )
                     self._workflow.transition(
                         dossier,
-                        target=self._confirmed_dossier_status(dossier),
+                        target=await self._confirmed_dossier_status(dossier),
                         actor_user_id=dossier.owner_user_id,
                         allowed_sources={DossierStatus.PAYMENT_PENDING},
                         reason_code="PAYMENT_RECONCILIATION_CONFIRMED",
@@ -1576,6 +1686,11 @@ class PaymentService:
             raise PaymentConflictError("Manual confirmation evidence is required.")
         async with self._session.begin():
             order = await self._required_order(order_id, for_update=True)
+            dossier = await self._required_dossier(order.dossier_id, for_update=True)
+            if order.is_test or dossier.is_test or order.provider == "test":
+                raise PaymentConflictError(
+                    "TEST payment orders cannot be manually confirmed."
+                )
             if order.status not in {
                 PaymentStatus.PENDING,
                 PaymentStatus.PROCESSING,
@@ -1583,13 +1698,9 @@ class PaymentService:
                 raise PaymentConflictError(
                     "Only a pending payment can be manually confirmed."
                 )
-            dossier = await self._required_dossier(
-                order.dossier_id,
-                for_update=True,
-            )
             self._workflow.transition(
                 dossier,
-                target=self._confirmed_dossier_status(dossier),
+                target=await self._confirmed_dossier_status(dossier),
                 actor_user_id=principal.user_id,
                 allowed_sources={DossierStatus.PAYMENT_PENDING},
                 reason_code="PAYMENT_MANUAL_CONFIRMATION",
@@ -1792,6 +1903,7 @@ class PaymentService:
             id=order.id,
             order_code=order.order_code,
             dossier_id=order.dossier_id,
+            is_test=order.is_test,
             fee_obligation_id=order.fee_obligation_id,
             purpose=str(order.metadata_json["purpose"])
             if order.metadata_json.get("purpose")
@@ -1836,11 +1948,67 @@ class PaymentService:
     def _utc(value: datetime) -> datetime:
         return value.replace(tzinfo=UTC) if value.tzinfo is None else value
 
-    def _confirmed_dossier_status(self, dossier: Dossier) -> DossierStatus:
+    async def _confirmed_dossier_status(self, dossier: Dossier) -> DossierStatus:
         if dossier.submission_fee_required:
-            dossier.submission_fee_paid_at = self._clock()
+            submitted_at = self._clock()
+            dossier.submission_fee_paid_at = submitted_at
+            if dossier.submitted_at is None:
+                version = await self._session.scalar(
+                    select(DossierVersion)
+                    .where(
+                        DossierVersion.dossier_id == dossier.id,
+                        DossierVersion.version_no == dossier.current_version_no,
+                    )
+                    .with_for_update()
+                    .execution_options(populate_existing=True)
+                )
+                if version is None:
+                    raise PaymentConflictError(
+                        "The pending dossier snapshot is unavailable."
+                    )
+                snapshot = dict(version.snapshot_json)
+                submission = dict(snapshot.get("submission", {}))
+                submission["submittedAt"] = submitted_at.isoformat()
+                snapshot["submission"] = submission
+                version.snapshot_json = snapshot
+                version.canonical_hash = snapshot_sha256(snapshot)
+                version.submitted_at = submitted_at
+                dossier.submitted_at = submitted_at
+                self._add_submitted_event(dossier, version, submitted_at)
             return DossierStatus.SUBMITTED
         return DossierStatus.PAID
+
+    def _add_submitted_event(
+        self,
+        dossier: Dossier,
+        version: DossierVersion,
+        occurred_at: datetime,
+    ) -> None:
+        if self._payload_cipher is None:
+            return
+        event_type = "dossier.submitted"
+        encrypted = self._payload_cipher.encrypt(
+            {
+                "dossier_id": str(dossier.id),
+                "dossier_version_id": str(version.id),
+                "recipient_user_id": str(dossier.owner_user_id),
+                "version": str(version.version_no),
+                "submission_fee_paid": True,
+            },
+            event_type=event_type,
+            aggregate_id=dossier.id,
+        )
+        self._outbox.add(
+            OutboxEvent(
+                event_type=event_type,
+                aggregate_type="dossier",
+                aggregate_id=dossier.id,
+                payload_ciphertext=encrypted.ciphertext,
+                payload_nonce=encrypted.nonce,
+                key_id=encrypted.key_id,
+                occurred_at=occurred_at,
+            )
+        )
 
     async def _add_paid_notification(
         self,
@@ -1928,6 +2096,8 @@ class PaymentService:
             )
 
     async def _settle_fee_obligation(self, order: PaymentOrder) -> None:
+        if order.is_test and order.metadata_json.get("voucher_id"):
+            raise PaymentConflictError("TEST payments cannot redeem vouchers.")
         if order.metadata_json.get("voucher_id"):
             from app.modules.promotions.checkout import PromotionCheckout
 
@@ -1941,6 +2111,8 @@ class PaymentService:
         )
         if obligation is None:
             raise PaymentConflictError("Linked fee obligation was not found.")
+        if order.is_test != obligation.is_test:
+            raise PaymentConflictError("Payment and fee TEST markers do not match.")
         if obligation.status not in {
             FeeObligationStatus.OPEN,
             FeeObligationStatus.OVERDUE,
@@ -1950,7 +2122,8 @@ class PaymentService:
         obligation.status = FeeObligationStatus.PAID
         obligation.paid_at = order.paid_at
         if (
-            order.amount_minor > 0
+            not order.is_test
+            and order.amount_minor > 0
             and order.currency.upper() == "VND"
             and obligation.fee_type != "DOSSIER_SUBMISSION"
         ):

@@ -392,6 +392,7 @@ class PublicRepository:
     def _published_condition() -> ColumnElement[bool]:
         return (
             (Dossier.status == DossierStatus.PUBLISHED)
+            & Dossier.is_test.is_(False)
             & (Dossier.visibility == DossierVisibility.PUBLIC)
             & Dossier.slug.is_not(None)
             & Dossier.deleted_at.is_(None)
@@ -404,9 +405,13 @@ class PublicRepository:
         Publication visibility controls the gallery, not the integrity proof.
         Only immutable, allowlisted certificate metadata is projected here.
         """
-        return Dossier.status.in_(
-            (DossierStatus.CERTIFICATE_ISSUED, DossierStatus.PUBLISHED)
-        ) & Dossier.deleted_at.is_(None)
+        return (
+            Dossier.is_test.is_(False)
+            & Dossier.status.in_(
+                (DossierStatus.CERTIFICATE_ISSUED, DossierStatus.PUBLISHED)
+            )
+            & Dossier.deleted_at.is_(None)
+        )
 
     @staticmethod
     def _public_statement() -> Select[

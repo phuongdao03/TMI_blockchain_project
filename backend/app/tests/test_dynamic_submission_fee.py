@@ -14,7 +14,12 @@ from app.modules.billing.models import (
     FeeWaiver,
     FeeWaiverStatus,
 )
-from app.modules.dossiers.models import Dossier, DossierStatus, DossierType
+from app.modules.dossiers.models import (
+    Dossier,
+    DossierStatus,
+    DossierType,
+    DossierVersion,
+)
 from app.modules.dossiers.schemas import SubmissionFeeQuoteData
 from app.modules.payments.models import PaymentOrder
 from app.tests.test_dossier_submission import (
@@ -53,7 +58,7 @@ async def _install_policy(service, sessions, owner, dossier_id, *, amount_minor)
         draft = await policies.create_draft(
             actor_user_id=owner.id,
             fee_type="DOSSIER_SUBMISSION",
-            dossier_type_id=dossier_type.id,
+            dossier_type_id=None,
             amount_minor=amount_minor,
             starts_at=NOW,
             ends_at=None,
@@ -98,6 +103,10 @@ def test_quote_is_read_only_and_submit_requires_current_policy_consent() -> None
         )
         assert submitted.dossier.status is DossierStatus.PAYMENT_PENDING
         async with sessions() as session:
+            stored_dossier = await session.get(Dossier, draft.id)
+            version = await session.scalar(select(DossierVersion))
+            assert stored_dossier is not None and stored_dossier.submitted_at is None
+            assert version is not None and version.submitted_at is None
             obligation = await session.scalar(select(FeeObligation))
             order = await session.scalar(select(PaymentOrder))
             assert obligation is not None and order is not None
@@ -173,7 +182,7 @@ def test_stale_preview_requotes_without_changing_old_obligation_amount() -> None
             second_draft = await policies.create_draft(
                 actor_user_id=owner.id,
                 fee_type="DOSSIER_SUBMISSION",
-                dossier_type_id=dossier_type.id,
+                dossier_type_id=None,
                 amount_minor=6_000_000,
                 starts_at=NOW + timedelta(days=1),
                 ends_at=None,
@@ -206,7 +215,7 @@ def test_stale_preview_requotes_without_changing_old_obligation_amount() -> None
     asyncio.run(exercise())
 
 
-def test_full_waiver_is_approved_separately_and_redeemed_once() -> None:
+def test_admin_grants_full_waiver_and_it_is_redeemed_once() -> None:
     async def exercise() -> None:
         service, sessions, engine, owner, media = await _build_service()
         principal = _principal(owner)
@@ -218,21 +227,15 @@ def test_full_waiver_is_approved_separately_and_redeemed_once() -> None:
         )
         async with sessions() as session:
             policies = FeePolicyService(session, clock=lambda: service._clock())
-            waiver = await policies.request_waiver(
+            waiver = await policies.grant_submission_waiver(
                 dossier_id=draft.id,
-                fee_type="DOSSIER_SUBMISSION",
-                amount_minor=5_000_000,
                 reason="Approved exception test",
-                actor_user_id=owner.id,
+                actor_user_id=admin.id,
             )
-            with pytest.raises(PriceCatalogConflictError, match="different approver"):
-                await policies.decide_waiver(
-                    waiver.id, actor_user_id=owner.id, approve=True
-                )
-            approved = await policies.decide_waiver(
-                waiver.id, actor_user_id=admin.id, approve=True
-            )
-            assert approved.status is FeeWaiverStatus.APPROVED
+            assert waiver.status is FeeWaiverStatus.APPROVED
+            assert waiver.amount_minor == 5_000_000
+            assert waiver.requested_by_user_id == admin.id
+            assert waiver.approved_by_user_id == admin.id
 
         submitted = await service.submit_dossier(
             principal,

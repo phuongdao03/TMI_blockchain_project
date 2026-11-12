@@ -85,11 +85,13 @@ docs/specs/*
 !docs/specs/dossier-applicant-claims.md
 !docs/specs/council-evidence-policy-guards.md
 !docs/specs/dynamic-dossier-fee-management.md
+!docs/specs/dossier-payment-at-submission-v2.md
 !docs/handoffs/dossier-applicant-claims.md
 !docs/handoffs/council-evidence-policy-guards.md
 !docs/handoffs/structured-dossier-review-2026.md
 !docs/handoffs/admin-dashboard-p0.md
 !docs/handoffs/payment-qr-and-admin-history.md
+!docs/handoffs/dossier-submission-payment-test.md
 !docs/handoffs/repository-standardization-audit.md
 !docs/handoffs/ux-copy-topup-regression.md
 CONTEXT.md

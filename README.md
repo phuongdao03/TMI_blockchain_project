@@ -53,6 +53,10 @@ Admin P0 permissions, API contracts, deployment, rollback, and verification
 evidence are recorded in
 [the admin dashboard handoff](docs/handoffs/admin-dashboard-p0.md).
 
+The implemented dossier payment-at-submission and TEST-isolation design is
+documented in [its spec](docs/specs/dossier-payment-at-submission-v2.md) and
+[handoff](docs/handoffs/dossier-submission-payment-test.md).
+
 ## Local development
 
 ### Requirements

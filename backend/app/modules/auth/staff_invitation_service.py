@@ -3,7 +3,7 @@ from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
-from sqlalchemy import func, select, update
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,6 +13,7 @@ from app.modules.audit.service import AuditService
 from app.modules.auth.authorization import AuthorizationPolicy, PolicyRequirement
 from app.modules.auth.firebase_provider import FirebaseClaims
 from app.modules.auth.models import (
+    AccountType,
     AuthIdentity,
     AuthProvider,
     StaffInvitation,
@@ -28,6 +29,7 @@ from app.modules.auth.schemas import (
     StaffInvitationData,
     StaffInvitationRequest,
     StaffInvitationStatus,
+    TestApplicantInvitationRequest,
 )
 from app.modules.auth.security import OutboxPayloadCipher, hash_verification_token
 from app.modules.auth.session_service import AuthPrincipal
@@ -106,12 +108,33 @@ class StaffInvitationService:
             user_agent=user_agent,
         )
 
+    async def create_test_applicant(
+        self,
+        *,
+        payload: TestApplicantInvitationRequest,
+        principal: AuthPrincipal,
+        audit: AuditService,
+        request_id: str | None,
+        user_agent: str | None,
+    ) -> StaffInvitationData:
+        return await self._create(
+            email=str(payload.email),
+            role_code="USER",
+            organization_id=None,
+            is_test_account=True,
+            principal=principal,
+            audit=audit,
+            request_id=request_id,
+            user_agent=user_agent,
+        )
+
     async def _create(
         self,
         *,
         email: str,
         role_code: str,
         organization_id: UUID | None,
+        is_test_account: bool = False,
         principal: AuthPrincipal,
         audit: AuditService,
         request_id: str | None,
@@ -122,11 +145,23 @@ class StaffInvitationService:
         now = self._clock()
         try:
             async with self._session.begin():
+                if is_test_account and await self._auth.get_user_by_email(email):
+                    raise DomainError(
+                        code="TEST_APPLICANT_MUST_BE_NEW",
+                        message="A TEST applicant invitation requires a new account.",
+                        status_code=409,
+                    )
                 target_user = await self._validate_target(
                     email=email,
                     role_code=role_code,
                     organization_id=organization_id,
                 )
+                if is_test_account and target_user is not None:
+                    raise DomainError(
+                        code="TEST_APPLICANT_MUST_BE_NEW",
+                        message="A TEST applicant invitation requires a new account.",
+                        status_code=409,
+                    )
                 active = tuple(
                     (
                         await self._session.scalars(
@@ -154,6 +189,7 @@ class StaffInvitationService:
                     email=email,
                     role_code=role_code,
                     organization_id=organization_id,
+                    is_test_account=is_test_account,
                     created_by_user_id=principal.user_id,
                     now=now,
                 )
@@ -192,7 +228,11 @@ class StaffInvitationService:
                         else "staff_invitation"
                     ),
                     resource_id=str(invitation.id),
-                    after={"email": email, "role": role_code},
+                    after={
+                        "email": email,
+                        "role": role_code,
+                        "isTestAccount": is_test_account,
+                    },
                     request_id=request_id,
                     user_agent=user_agent,
                 )
@@ -344,6 +384,12 @@ class StaffInvitationService:
                     raise self._invalid()
                 if existing_user is None and identity is not None:
                     raise self._invalid()
+                if invitation.is_test_account and (
+                    invitation.role_code != "USER"
+                    or invitation.organization_id is not None
+                    or existing_user is not None
+                ):
+                    raise self._invalid()
                 role = await self._auth.get_role_by_code(invitation.role_code)
                 if role is None or role.code not in allowed_roles:
                     raise self._invalid()
@@ -354,6 +400,12 @@ class StaffInvitationService:
                         password_hash=None,
                         status=UserStatus.ACTIVE,
                         email_verified_at=now,
+                        account_type=(
+                            AccountType.INDIVIDUAL_APPLICANT
+                            if invitation.is_test_account
+                            else None
+                        ),
+                        is_test_account=invitation.is_test_account,
                     )
                     self._auth.add_user(user)
                     await self._session.flush()
@@ -507,7 +559,12 @@ class StaffInvitationService:
     ) -> tuple[list[StaffInvitationData], int]:
         statement = (
             select(StaffInvitation)
-            .where(StaffInvitation.role_code.in_(INTERNAL_MANAGED_ROLES))
+            .where(
+                or_(
+                    StaffInvitation.role_code.in_(INTERNAL_MANAGED_ROLES),
+                    StaffInvitation.is_test_account.is_(True),
+                )
+            )
             .order_by(StaffInvitation.created_at.desc())
             .offset((page - 1) * page_size)
             .limit(page_size)
@@ -517,7 +574,10 @@ class StaffInvitationService:
             (
                 await self._session.scalar(
                     select(func.count(StaffInvitation.id)).where(
-                        StaffInvitation.role_code.in_(INTERNAL_MANAGED_ROLES)
+                        or_(
+                            StaffInvitation.role_code.in_(INTERNAL_MANAGED_ROLES),
+                            StaffInvitation.is_test_account.is_(True),
+                        )
                     )
                 )
             )
@@ -567,6 +627,7 @@ class StaffInvitationService:
         email: str,
         role_code: str,
         organization_id: UUID | None,
+        is_test_account: bool,
         created_by_user_id: UUID,
         now: datetime,
     ) -> tuple[StaffInvitation, str]:
@@ -576,6 +637,7 @@ class StaffInvitationService:
                 email=email,
                 role_code=role_code,
                 organization_id=organization_id,
+                is_test_account=is_test_account,
                 token_hash=hash_verification_token(raw_token),
                 expires_at=now + self._invitation_ttl,
                 created_by_user_id=created_by_user_id,
@@ -676,7 +738,9 @@ class StaffInvitationService:
 
     @staticmethod
     def _require_staff_invitation(invitation: StaffInvitation) -> None:
-        if invitation.role_code not in INTERNAL_MANAGED_ROLES:
+        if invitation.role_code not in INTERNAL_MANAGED_ROLES and not (
+            invitation.is_test_account and invitation.role_code == "USER"
+        ):
             raise StaffInvitationService._invalid()
 
     @staticmethod
@@ -709,6 +773,7 @@ class StaffInvitationService:
             status=status,
             expiresAt=invitation.expires_at,
             createdAt=invitation.created_at,
+            isTestAccount=invitation.is_test_account,
         )
 
     @staticmethod

@@ -414,7 +414,9 @@ class PublicationService:
 
     @staticmethod
     def _require_publishable(context: PublicWorkPublicationContext) -> None:
-        reasons = publication_checklist(context)
+        reasons = list(publication_checklist(context))
+        if context.dossier.is_test:
+            reasons.append("test_dossier_cannot_be_published")
         if reasons:
             raise PublicWorkNotPublishableError(reasons)
 

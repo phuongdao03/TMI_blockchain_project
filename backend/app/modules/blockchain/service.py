@@ -149,6 +149,8 @@ class BlockchainTransactionService:
             dossier = await self._dossiers.get_by_id(dossier_id, for_update=True)
             if dossier is None:
                 raise BlockchainNotFoundError()
+            if dossier.is_test:
+                raise BlockchainConflictError("TEST dossiers cannot be anchored.")
             version = await self._session.scalar(
                 select(DossierVersion).where(
                     DossierVersion.id == dossier_version_id,
@@ -236,6 +238,10 @@ class BlockchainTransactionService:
             dossier = await self._dossiers.get_by_id(claim.dossier_id, for_update=True)
             if dossier is None:
                 raise BlockchainNotFoundError()
+            if dossier.is_test:
+                raise BlockchainConflictError(
+                    "TEST dossier evidence cannot be anchored."
+                )
             if dossier.status not in DOCUMENT_EVIDENCE_ELIGIBLE_STATUSES:
                 raise BlockchainConflictError(
                     "Document evidence is not approved for blockchain anchoring."
@@ -381,6 +387,11 @@ class BlockchainTransactionService:
             )
             if dossier_version is None:
                 raise BlockchainConflictError("Dossier version context is unavailable.")
+            dossier = await self._dossiers.get_by_id(certificate.dossier_id)
+            if dossier is None:
+                raise BlockchainNotFoundError()
+            if dossier.is_test:
+                raise BlockchainConflictError("TEST dossiers cannot be anchored.")
             payload = self._gateway.encode_issue_certificate(
                 certificate_id=hashlib.sha256(
                     certificate.certificate_number.encode()

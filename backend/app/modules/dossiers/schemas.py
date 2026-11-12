@@ -145,6 +145,7 @@ class DossierData(DossierSchema):
     submission_fee_required: bool = False
     submission_fee_paid_at: datetime | None = None
     submission_fee_waived_at: datetime | None = None
+    is_test: bool = False
     claims: tuple[DossierClaimData, ...] = ()
     claims_revision: int = 0
 
@@ -299,7 +300,7 @@ class DossierVersionData(DossierSchema):
     snapshot_json: dict[str, object]
     canonical_hash: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
     submitted_by: UUID
-    submitted_at: datetime
+    submitted_at: datetime | None
 
 
 class DossierStatusHistoryData(DossierSchema):

@@ -255,6 +255,9 @@ class Dossier(UtcTimestampMixin, Base):
         default=DossierVisibility.PRIVATE,
         server_default=DossierVisibility.PRIVATE.value,
     )
+    is_test: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=false()
+    )
     current_version_no: Mapped[int] = mapped_column(
         Integer,
         nullable=False,
@@ -322,7 +325,7 @@ class DossierVersion(Base):
     )
     submitted_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        nullable=False,
+        nullable=True,
         server_default=func.now(),
     )
 

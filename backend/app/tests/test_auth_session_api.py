@@ -206,6 +206,7 @@ def test_login_api_sets_secure_cookie_contract_without_returning_tokens() -> Non
             "accountType": None,
             "permissions": [],
             "isEmployee": False,
+            "isTestAccount": False,
         }
     }
     assert "token" not in response.text.lower()
@@ -338,4 +339,5 @@ def test_applicant_upgrade_api_returns_updated_account_scope() -> None:
         "accountType": "INDIVIDUAL_APPLICANT",
         "permissions": [],
         "isEmployee": False,
+        "isTestAccount": False,
     }

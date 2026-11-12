@@ -4,6 +4,7 @@ from uuid import UUID
 
 from app.core.config import get_settings
 from app.db.session import get_session_factory
+from app.modules.auth.security import OutboxPayloadCipher
 from app.modules.payments.provider import build_payment_gateway
 from app.modules.payments.service import PaymentService
 from app.workers.celery_app import celery_app
@@ -61,6 +62,7 @@ async def _reconcile_pending_payments() -> int:
     if settings.payment_provider.strip().lower() != "payos":
         return 0
     gateway = build_payment_gateway(settings)
+    secret = settings.auth_outbox_encryption_key
     try:
         async with get_session_factory()() as session:
             service = PaymentService(
@@ -73,6 +75,12 @@ async def _reconcile_pending_payments() -> int:
                 enqueue_certificate_issue=lambda dossier_id: celery_app.send_task(
                     "app.workers.certificate_tasks.issue_certificate",
                     args=[str(dossier_id)],
+                ),
+                payload_cipher=OutboxPayloadCipher.from_base64(
+                    encoded_key=(
+                        secret.get_secret_value() if secret is not None else ""
+                    ),
+                    key_id=settings.auth_outbox_key_id,
                 ),
             )
             return await service.reconcile_pending()

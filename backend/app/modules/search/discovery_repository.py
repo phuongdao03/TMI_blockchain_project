@@ -9,7 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.blockchain.models import Certificate, CertificateStatus
-from app.modules.dossiers.models import Category
+from app.modules.dossiers.models import Category, Dossier
 from app.modules.public.models import (
     PublicationStatus,
     PublicWork,
@@ -57,6 +57,12 @@ class SearchDiscoveryRepository:
             .join(Category, Category.id == PublicWork.category_id)
             .where(
                 PublicWork.id == work_id,
+                ~exists(
+                    select(1).where(
+                        Dossier.id == PublicWork.dossier_id,
+                        Dossier.is_test.is_(True),
+                    )
+                ),
                 PublicWork.publication_status == PublicationStatus.PUBLISHED,
                 PublicWork.visibility == PublicWorkVisibility.PUBLIC,
                 PublicWork.published_at.is_not(None),
@@ -226,6 +232,12 @@ class SearchDiscoveryRepository:
         source = await self._session.scalar(
             select(PublicWork).where(
                 PublicWork.slug == slug,
+                ~exists(
+                    select(1).where(
+                        Dossier.id == PublicWork.dossier_id,
+                        Dossier.is_test.is_(True),
+                    )
+                ),
                 PublicWork.publication_status == PublicationStatus.PUBLISHED,
                 PublicWork.visibility == PublicWorkVisibility.PUBLIC,
                 PublicWork.deleted_at.is_(None),
@@ -258,6 +270,12 @@ class SearchDiscoveryRepository:
                         .join(Category, Category.id == PublicWork.category_id)
                         .where(
                             PublicWork.id != source.id,
+                            ~exists(
+                                select(1).where(
+                                    Dossier.id == PublicWork.dossier_id,
+                                    Dossier.is_test.is_(True),
+                                )
+                            ),
                             PublicWork.publication_status
                             == PublicationStatus.PUBLISHED,
                             PublicWork.visibility == PublicWorkVisibility.PUBLIC,

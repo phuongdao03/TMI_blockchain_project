@@ -427,6 +427,7 @@ class WalletWithdrawalService:
                 user is None
                 or user.status is not UserStatus.ACTIVE
                 or user.email_verified_at is None
+                or user.is_test_account
             ):
                 raise DomainError(
                     code="WITHDRAWAL_ACCOUNT_INELIGIBLE",

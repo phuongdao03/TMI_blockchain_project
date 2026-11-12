@@ -26,6 +26,7 @@ class PaymentOrderView:
     id: UUID
     order_code: str
     dossier_id: UUID
+    is_test: bool
     provider: str
     provider_order_id: str | None
     amount_minor: int

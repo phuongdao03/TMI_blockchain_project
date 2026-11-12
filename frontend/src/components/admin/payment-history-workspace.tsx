@@ -70,6 +70,7 @@ export function PaymentHistoryWorkspace() {
   const [filters, setFilters] = useState<PaymentHistoryFilters>({
     page: 1,
     pageSize: 25,
+    testMode: "REAL",
   });
   const [searchDraft, setSearchDraft] = useState("");
   const [dateFrom, setDateFrom] = useState("");
@@ -184,7 +185,7 @@ export function PaymentHistoryWorkspace() {
 
       <section className="space-y-5 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-6">
         <form
-          className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(14rem,1fr)_12rem_12rem_12rem_auto_auto]"
+          className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(14rem,1fr)_12rem_12rem_12rem_12rem_auto_auto]"
           onSubmit={applyFilters}
         >
           <label className="sm:col-span-2 xl:col-span-1">
@@ -198,6 +199,26 @@ export function PaymentHistoryWorkspace() {
               placeholder="Mã giao dịch, hồ sơ hoặc email"
               value={searchDraft}
             />
+          </label>
+          <label>
+            <span className="mb-1 block text-xs font-bold text-[var(--theme-muted)]">
+              Loại giao dịch
+            </span>
+            <select
+              className="min-h-11 w-full rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 text-sm text-[var(--theme-text)]"
+              onChange={(event) =>
+                setFilters((current) => ({
+                  ...current,
+                  page: 1,
+                  testMode: event.target.value as "REAL" | "TEST" | "ALL",
+                }))
+              }
+              value={filters.testMode ?? "REAL"}
+            >
+              <option value="REAL">Giao dịch thật</option>
+              <option value="TEST">Giao dịch TEST</option>
+              <option value="ALL">Tất cả</option>
+            </select>
           </label>
           <label>
             <span className="mb-1 block text-xs font-bold text-[var(--theme-muted)]">
@@ -295,6 +316,11 @@ export function PaymentHistoryWorkspace() {
                   <div className="min-w-0 space-y-1">
                     <p className="font-semibold text-[var(--theme-text)]">
                       {row.dossierCode} · {row.dossierTitle}
+                      {row.order.isTest ? (
+                        <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-900">
+                          TEST
+                        </span>
+                      ) : null}
                     </p>
                     <p className="break-all font-mono text-sm text-[var(--theme-muted)]">
                       {row.order.orderCode} · {money(row.order.amountMinor)}

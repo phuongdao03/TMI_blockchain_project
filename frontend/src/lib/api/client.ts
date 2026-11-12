@@ -953,6 +953,12 @@ export const walletApi = {
       { method: "POST", headers: { "Idempotency-Key": key } },
     );
   },
+  simulateTestPayment(orderId: string, outcome: "SUCCESS" | "FAILURE") {
+    return request<PaymentOrder>(
+      `/payment-orders/${encodeURIComponent(orderId)}/test-simulation`,
+      { method: "POST", body: JSON.stringify({ outcome }) },
+    );
+  },
 };
 
 export const withdrawalApi = {
@@ -1639,6 +1645,12 @@ export const staffInvitationsApi = {
       body: JSON.stringify(input),
     });
   },
+  createTestApplicant(email: string) {
+    return request<import("./types").StaffInvitation>(
+      "/admin/test-applicant-invitations",
+      { method: "POST", body: JSON.stringify({ email }) },
+    );
+  },
   resend(invitationId: string) {
     return request<StaffInvitation>(
       `/admin/staff-invitations/${invitationId}/resend`,
@@ -1882,6 +1894,7 @@ export const dossierApi = {
     dossierId: string,
     idempotencyKey: string,
     acceptedFeePolicyVersion?: number | null,
+    testPaymentMode?: "SKIP" | "MOCK",
   ) {
     return request<DossierSubmission>(`/dossiers/${dossierId}/submit`, {
       method: "POST",
@@ -1890,6 +1903,9 @@ export const dossierApi = {
         ...(acceptedFeePolicyVersion == null
           ? {}
           : { "X-Fee-Policy-Version": String(acceptedFeePolicyVersion) }),
+        ...(testPaymentMode == null
+          ? {}
+          : { "X-Test-Payment-Mode": testPaymentMode }),
       },
     });
   },
@@ -2231,7 +2247,7 @@ export const feeApi = {
   },
   createPolicy(input: {
     feeType: string;
-    dossierTypeId: string;
+    dossierTypeId?: string | null;
     amountMinor: number;
     startsAt: string;
     endsAt?: string | null;
@@ -2271,6 +2287,12 @@ export const feeApi = {
       body: JSON.stringify(input),
     });
   },
+  grantSubmissionWaiver(input: { dossierId: string; reason: string }) {
+    return request<import("./types").AdminFeeWaiver>(
+      "/admin/fee-waivers/grant",
+      { method: "POST", body: JSON.stringify(input) },
+    );
+  },
   decideWaiver(waiverId: string, approve: boolean, reason: string) {
     const decision = approve ? "approve" : "reject";
     return request<import("./types").AdminFeeWaiver>(
@@ -2285,6 +2307,7 @@ function paymentHistoryQuery(
   includePagination = true,
 ) {
   const query = new URLSearchParams();
+  if (filters.testMode) query.set("testMode", filters.testMode);
   if (filters.status) query.set("status", filters.status);
   if (filters.createdFrom) query.set("createdFrom", filters.createdFrom);
   if (filters.createdTo) query.set("createdTo", filters.createdTo);

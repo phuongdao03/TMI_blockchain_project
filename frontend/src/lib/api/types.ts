@@ -447,6 +447,7 @@ export interface AuthUser {
   permissions?: string[];
   accountType: AccountType | null;
   isEmployee?: boolean;
+  isTestAccount?: boolean;
 }
 
 export type AdminUserStatus = "PENDING" | "ACTIVE" | "SUSPENDED" | "DELETED";
@@ -520,6 +521,7 @@ export interface StaffInvitation {
   status: StaffInvitationStatus;
   expiresAt: string;
   createdAt: string | null;
+  isTestAccount?: boolean;
 }
 
 export type AccountType =
@@ -812,6 +814,7 @@ export interface Dossier {
   submissionFeeRequired?: boolean;
   submissionFeePaidAt?: string | null;
   submissionFeeWaivedAt?: string | null;
+  isTest?: boolean;
   id: string;
   code: string;
   ownerUserId: string;
@@ -995,7 +998,7 @@ export interface DossierVersion {
   snapshotJson: Record<string, unknown>;
   canonicalHash: string;
   submittedBy: string;
-  submittedAt: string;
+  submittedAt: string | null;
 }
 
 export interface DossierTimelineItem {

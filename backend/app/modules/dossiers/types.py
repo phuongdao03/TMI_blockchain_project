@@ -66,6 +66,7 @@ class DossierView:
     submission_fee_required: bool = False
     submission_fee_paid_at: datetime | None = None
     submission_fee_waived_at: datetime | None = None
+    is_test: bool = False
     claims: tuple[DossierClaim, ...] = ()
     claims_revision: int = 0
 
@@ -159,7 +160,7 @@ class DossierVersionView:
     snapshot_json: dict[str, object]
     canonical_hash: str
     submitted_by: UUID
-    submitted_at: datetime
+    submitted_at: datetime | None
 
 
 @dataclass(frozen=True, slots=True)

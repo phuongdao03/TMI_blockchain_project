@@ -48,7 +48,7 @@ def test_policy_resolution_uses_half_open_utc_interval() -> None:
             service = FeePolicyService(session, clock=lambda: NOW)
             first = await service.create_draft(
                 actor_user_id=users[0].id,
-                fee_type="DOSSIER_SUBMISSION",
+                fee_type="CERTIFICATE_ISSUANCE",
                 dossier_type_id=dossier_type.id,
                 amount_minor=5_000_000,
                 starts_at=NOW,
@@ -58,8 +58,45 @@ def test_policy_resolution_uses_half_open_utc_interval() -> None:
             await service.approve(first.id, actor_user_id=users[1].id)
             assert (
                 await service.resolve(
-                    fee_type="DOSSIER_SUBMISSION",
+                    fee_type="CERTIFICATE_ISSUANCE",
                     dossier_type_id=dossier_type.id,
+                    at=NOW,
+                )
+            ).id == first.id
+            assert (
+                await service.resolve(
+                    fee_type="CERTIFICATE_ISSUANCE",
+                    dossier_type_id=dossier_type.id,
+                    at=next_day,
+                )
+                is None
+            )
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_submission_policy_is_global_and_versions_share_one_scope() -> None:
+    async def exercise() -> None:
+        engine, sessions, users, dossier_type = await _database()
+        next_day = NOW + timedelta(days=1)
+        async with sessions() as session:
+            service = FeePolicyService(session, clock=lambda: NOW)
+            first_draft = await service.create_draft(
+                actor_user_id=users[0].id,
+                fee_type="DOSSIER_SUBMISSION",
+                dossier_type_id=None,
+                amount_minor=5_000_000,
+                starts_at=NOW,
+                ends_at=None,
+                reason="Global submission policy",
+            )
+            first = await service.approve(first_draft.id, actor_user_id=users[1].id)
+            assert first.dossier_type_id is None
+            assert (
+                await service.resolve(
+                    fee_type="DOSSIER_SUBMISSION",
+                    dossier_type_id=None,
                     at=NOW,
                 )
             ).id == first.id
@@ -67,10 +104,27 @@ def test_policy_resolution_uses_half_open_utc_interval() -> None:
                 await service.resolve(
                     fee_type="DOSSIER_SUBMISSION",
                     dossier_type_id=dossier_type.id,
-                    at=next_day,
+                    at=NOW,
                 )
                 is None
             )
+
+        async with sessions() as session:
+            service = FeePolicyService(session, clock=lambda: next_day)
+            second_draft = await service.create_draft(
+                actor_user_id=users[0].id,
+                fee_type="DOSSIER_SUBMISSION",
+                dossier_type_id=None,
+                amount_minor=6_000_000,
+                starts_at=next_day,
+                ends_at=None,
+                reason="Global submission price update",
+            )
+            second = await service.approve(second_draft.id, actor_user_id=users[1].id)
+            assert second.version_no == 2
+            assert second.dossier_type_id is None
+            predecessor = await service.get_policy(first.id, at=next_day)
+            assert predecessor.ends_at == next_day
         await engine.dispose()
 
     asyncio.run(exercise())
@@ -83,7 +137,7 @@ def test_policy_approval_requires_separation_of_duties_and_closes_predecessor() 
             service = FeePolicyService(session, clock=lambda: NOW)
             first = await service.create_draft(
                 actor_user_id=users[0].id,
-                fee_type="DOSSIER_SUBMISSION",
+                fee_type="CERTIFICATE_ISSUANCE",
                 dossier_type_id=dossier_type.id,
                 amount_minor=4_000_000,
                 starts_at=NOW,
@@ -95,7 +149,7 @@ def test_policy_approval_requires_separation_of_duties_and_closes_predecessor() 
             await service.approve(first.id, actor_user_id=users[1].id)
             overlapping = await service.create_draft(
                 actor_user_id=users[0].id,
-                fee_type="DOSSIER_SUBMISSION",
+                fee_type="CERTIFICATE_ISSUANCE",
                 dossier_type_id=dossier_type.id,
                 amount_minor=6_000_000,
                 starts_at=NOW + timedelta(days=1),
@@ -118,7 +172,7 @@ def test_fee_policy_status_is_derived_from_effective_time() -> None:
             service = FeePolicyService(session, clock=lambda: NOW)
             draft = await service.create_draft(
                 actor_user_id=users[0].id,
-                fee_type="DOSSIER_SUBMISSION",
+                fee_type="CERTIFICATE_ISSUANCE",
                 dossier_type_id=dossier_type.id,
                 amount_minor=1_250_000,
                 starts_at=NOW + timedelta(days=1),
@@ -144,7 +198,7 @@ def test_draft_policy_can_be_cancelled_before_approval() -> None:
             service = FeePolicyService(session, clock=lambda: NOW)
             draft = await service.create_draft(
                 actor_user_id=users[0].id,
-                fee_type="DOSSIER_SUBMISSION",
+                fee_type="CERTIFICATE_ISSUANCE",
                 dossier_type_id=dossier_type.id,
                 amount_minor=1_250_000,
                 starts_at=NOW + timedelta(days=1),

@@ -9,13 +9,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.modules.audit.service import AuditService
 from app.modules.billing.errors import PriceCatalogConflictError
 from app.modules.billing.models import (
+    FeeObligation,
+    FeeObligationStatus,
     FeePolicy,
     FeePolicyEvent,
     FeePolicyStatus,
     FeeWaiver,
     FeeWaiverStatus,
 )
-from app.modules.dossiers.models import Dossier
+from app.modules.dossiers.models import Dossier, DossierStatus
 
 SUPPORTED_FEE_TYPES = frozenset({"DOSSIER_SUBMISSION", "CERTIFICATE_ISSUANCE"})
 APPROVED_STATUSES = (
@@ -29,7 +31,7 @@ APPROVED_STATUSES = (
 class FeePolicyView:
     id: UUID
     fee_type: str
-    dossier_type_id: UUID
+    dossier_type_id: UUID | None
     version_no: int
     amount_minor: int
     currency: str
@@ -80,7 +82,7 @@ class FeePolicyService:
         *,
         actor_user_id: UUID,
         fee_type: str,
-        dossier_type_id: UUID,
+        dossier_type_id: UUID | None,
         amount_minor: int,
         starts_at: datetime,
         ends_at: datetime | None,
@@ -94,6 +96,14 @@ class FeePolicyService:
         now = self.current_time()
         if normalized_type not in SUPPORTED_FEE_TYPES:
             raise PriceCatalogConflictError("Unsupported dossier fee type.")
+        if normalized_type == "DOSSIER_SUBMISSION" and dossier_type_id is not None:
+            raise PriceCatalogConflictError(
+                "Submission fee policies must apply to every dossier type."
+            )
+        if normalized_type != "DOSSIER_SUBMISSION" and dossier_type_id is None:
+            raise PriceCatalogConflictError(
+                "This fee type requires a dossier type scope."
+            )
         if amount_minor <= 0 or amount_minor > 10**12:
             raise PriceCatalogConflictError(
                 "Fee amount must be a positive VND integer."
@@ -113,7 +123,9 @@ class FeePolicyService:
                     await self._session.scalar(
                         select(func.coalesce(func.max(FeePolicy.version_no), 0)).where(
                             FeePolicy.fee_type == normalized_type,
-                            FeePolicy.dossier_type_id == dossier_type_id,
+                            FeePolicy.dossier_type_id.is_(None)
+                            if dossier_type_id is None
+                            else FeePolicy.dossier_type_id == dossier_type_id,
                         )
                     )
                     or 0
@@ -170,7 +182,9 @@ class FeePolicyService:
                 )
             overlap_filters = [
                 FeePolicy.fee_type == policy.fee_type,
-                FeePolicy.dossier_type_id == policy.dossier_type_id,
+                FeePolicy.dossier_type_id.is_(None)
+                if policy.dossier_type_id is None
+                else FeePolicy.dossier_type_id == policy.dossier_type_id,
                 FeePolicy.status.in_(APPROVED_STATUSES),
                 or_(FeePolicy.ends_at.is_(None), FeePolicy.ends_at > policy.starts_at),
             ]
@@ -266,7 +280,7 @@ class FeePolicyService:
             return self._view(policy, now)
 
     async def resolve(
-        self, *, fee_type: str, dossier_type_id: UUID, at: datetime
+        self, *, fee_type: str, dossier_type_id: UUID | None, at: datetime
     ) -> FeePolicyView | None:
         instant = self._aware(at)
         normalized_type = fee_type.strip().upper()
@@ -275,7 +289,9 @@ class FeePolicyService:
             select(FeePolicy)
             .where(
                 FeePolicy.fee_type == normalized_type,
-                FeePolicy.dossier_type_id == dossier_type_id,
+                FeePolicy.dossier_type_id.is_(None)
+                if dossier_type_id is None
+                else FeePolicy.dossier_type_id == dossier_type_id,
                 FeePolicy.status.in_(APPROVED_STATUSES),
                 FeePolicy.starts_at <= instant,
                 or_(FeePolicy.ends_at.is_(None), FeePolicy.ends_at > instant),
@@ -335,11 +351,18 @@ class FeePolicyService:
             dossier = await self._session.scalar(
                 select(Dossier).where(Dossier.id == dossier_id).with_for_update()
             )
-            if dossier is None or dossier.dossier_type_id is None:
+            if dossier is None:
+                raise PriceCatalogConflictError("Billable dossier was not found.")
+            policy_scope_id = (
+                None
+                if normalized_type == "DOSSIER_SUBMISSION"
+                else dossier.dossier_type_id
+            )
+            if policy_scope_id is None and normalized_type != "DOSSIER_SUBMISSION":
                 raise PriceCatalogConflictError("Billable dossier was not found.")
             policy = await self.resolve(
                 fee_type=normalized_type,
-                dossier_type_id=dossier.dossier_type_id,
+                dossier_type_id=policy_scope_id,
                 at=now,
             )
             if policy is None or amount_minor > policy.amount_minor:
@@ -364,6 +387,134 @@ class FeePolicyService:
                 resource_type="fee_waiver",
                 resource_id=str(waiver.id),
                 after=self._waiver_snapshot(waiver),
+            )
+            await self._session.flush()
+            return self._waiver_view(waiver, now)
+
+    async def grant_submission_waiver(
+        self,
+        *,
+        dossier_id: UUID,
+        reason: str,
+        actor_user_id: UUID,
+    ) -> FeeWaiverView:
+        """Record an administrator's direct, full submission-fee waiver."""
+        normalized_reason = reason.strip()
+        now = self.current_time()
+        if not normalized_reason or len(normalized_reason) > 1000:
+            raise PriceCatalogConflictError("A waiver reason is required.")
+
+        async with self._session.begin():
+            dossier = await self._session.scalar(
+                select(Dossier)
+                .where(Dossier.id == dossier_id)
+                .with_for_update()
+                .execution_options(populate_existing=True)
+            )
+            if dossier is None:
+                raise PriceCatalogConflictError("Billable dossier was not found.")
+            if dossier.status not in {
+                DossierStatus.DRAFT,
+                DossierStatus.NEEDS_SUPPLEMENT,
+            }:
+                raise PriceCatalogConflictError(
+                    "A submission fee can only be waived before submission."
+                )
+            if (
+                dossier.submission_fee_paid_at is not None
+                or dossier.submission_fee_waived_at is not None
+            ):
+                raise PriceCatalogConflictError(
+                    "A settled submission fee cannot be waived."
+                )
+
+            obligation = await self._session.scalar(
+                select(FeeObligation)
+                .where(
+                    FeeObligation.dossier_id == dossier.id,
+                    FeeObligation.fee_type == "DOSSIER_SUBMISSION",
+                )
+                .with_for_update()
+            )
+            if obligation is not None and obligation.status in {
+                FeeObligationStatus.PAID,
+                FeeObligationStatus.WAIVED,
+            }:
+                raise PriceCatalogConflictError(
+                    "A settled submission fee cannot be waived."
+                )
+
+            if dossier.submission_fee_policy_mode == "DYNAMIC":
+                policy = await self.resolve(
+                    fee_type="DOSSIER_SUBMISSION",
+                    dossier_type_id=None,
+                    at=now,
+                )
+                if policy is None:
+                    raise PriceCatalogConflictError(
+                        "No approved submission fee policy is currently effective."
+                    )
+                amount_minor = policy.amount_minor
+            else:
+                snapshot = dossier.submission_fee_snapshot or {}
+                snapshot_amount = snapshot.get("grossAmountMinor")
+                if snapshot_amount is None:
+                    snapshot_amount = snapshot.get("amountMinor")
+                if not isinstance(snapshot_amount, int) or snapshot_amount <= 0:
+                    raise PriceCatalogConflictError(
+                        "The dossier has no fixed submission fee to waive."
+                    )
+                amount_minor = snapshot_amount
+
+            waiver = await self._session.scalar(
+                select(FeeWaiver)
+                .where(
+                    FeeWaiver.dossier_id == dossier.id,
+                    FeeWaiver.fee_type == "DOSSIER_SUBMISSION",
+                )
+                .with_for_update()
+                .execution_options(populate_existing=True)
+            )
+            before = self._waiver_snapshot(waiver) if waiver is not None else None
+            if waiver is None:
+                waiver = FeeWaiver(
+                    id=uuid4(),
+                    dossier_id=dossier.id,
+                    fee_type="DOSSIER_SUBMISSION",
+                    amount_minor=amount_minor,
+                    currency="VND",
+                    reason=normalized_reason,
+                    status=FeeWaiverStatus.APPROVED,
+                    requested_by_user_id=actor_user_id,
+                    approved_by_user_id=actor_user_id,
+                    approved_at=now,
+                    expires_at=now + timedelta(days=30),
+                )
+                self._session.add(waiver)
+            elif waiver.status is FeeWaiverStatus.REQUESTED:
+                waiver.amount_minor = amount_minor
+                waiver.reason = normalized_reason
+                waiver.status = FeeWaiverStatus.APPROVED
+                waiver.requested_by_user_id = actor_user_id
+                waiver.approved_by_user_id = actor_user_id
+                waiver.approved_at = now
+                waiver.expires_at = now + timedelta(days=30)
+            else:
+                raise PriceCatalogConflictError(
+                    "A waiver decision already exists for this dossier."
+                )
+
+            self._audit.record(
+                actor_user_id=actor_user_id,
+                action="billing.fee_waiver.granted",
+                resource_type="fee_waiver",
+                resource_id=str(waiver.id),
+                before=before,
+                after={
+                    **self._waiver_snapshot(waiver),
+                    "grantReason": normalized_reason,
+                    "grossFeeMinor": amount_minor,
+                },
             )
             await self._session.flush()
             return self._waiver_view(waiver, now)
@@ -493,12 +644,13 @@ class FeePolicyService:
             raise PriceCatalogConflictError("Fee policy was not found.")
         return policy
 
-    async def _lock_scope(self, fee_type: str, dossier_type_id: UUID) -> None:
+    async def _lock_scope(self, fee_type: str, dossier_type_id: UUID | None) -> None:
         if (
             self._session.bind is not None
             and self._session.bind.dialect.name == "postgresql"
         ):
-            scope = f"{fee_type}:{dossier_type_id}"
+            scope_id = str(dossier_type_id) if dossier_type_id is not None else "GLOBAL"
+            scope = f"{fee_type}:{scope_id}"
             await self._session.execute(
                 select(func.pg_advisory_xact_lock(func.hashtextextended(scope, 0)))
             )
@@ -587,7 +739,9 @@ class FeePolicyService:
     def _snapshot(policy: FeePolicy) -> dict[str, object]:
         return {
             "feeType": policy.fee_type,
-            "dossierTypeId": str(policy.dossier_type_id),
+            "dossierTypeId": str(policy.dossier_type_id)
+            if policy.dossier_type_id is not None
+            else None,
             "versionNo": policy.version_no,
             "amountMinor": policy.amount_minor,
             "currency": policy.currency,

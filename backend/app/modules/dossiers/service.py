@@ -3,7 +3,7 @@ import re
 from collections.abc import Callable, Mapping
 from copy import deepcopy
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID, uuid4
 
 from sqlalchemy import select
@@ -328,6 +328,7 @@ class DossierService:
                 visibility=payload.visibility,
                 submission_fee_required=False,
                 submission_fee_policy_mode="DYNAMIC",
+                is_test=principal.is_test_account,
             )
             self._repository.add(dossier)
             await self._session.flush()
@@ -910,12 +911,14 @@ class DossierService:
         *,
         idempotency_key: str,
         accepted_fee_policy_version: int | None = None,
+        test_payment_mode: Literal["SKIP", "MOCK"] | None = None,
     ) -> SubmissionView:
         return await self._submit(
             principal,
             dossier_id,
             idempotency_key=idempotency_key,
             accepted_fee_policy_version=accepted_fee_policy_version,
+            test_payment_mode=test_payment_mode,
             expected_status=DossierStatus.DRAFT,
             reason_code="APPLICANT_SUBMIT",
         )
@@ -933,6 +936,7 @@ class DossierService:
             dossier_id,
             idempotency_key=idempotency_key,
             accepted_fee_policy_version=accepted_fee_policy_version,
+            test_payment_mode=None,
             expected_status=DossierStatus.NEEDS_SUPPLEMENT,
             reason_code="APPLICANT_RESUBMIT",
         )
@@ -964,6 +968,7 @@ class DossierService:
         *,
         idempotency_key: str,
         accepted_fee_policy_version: int | None,
+        test_payment_mode: Literal["SKIP", "MOCK"] | None,
         expected_status: DossierStatus,
         reason_code: str,
     ) -> SubmissionView:
@@ -977,6 +982,8 @@ class DossierService:
                 for_update=True,
             )
             await self._require_mutation_scope(principal, dossier)
+            if dossier.is_test != principal.is_test_account:
+                raise DossierForbiddenError()
             if (
                 dossier.status
                 in {DossierStatus.SUBMITTED, DossierStatus.PAYMENT_PENDING}
@@ -1033,7 +1040,9 @@ class DossierService:
                     evidence_rows,
                     version_no=version_no,
                     submitted_by=principal.user_id,
-                    submitted_at=submitted_at,
+                    submitted_at=(
+                        None if expected_status is DossierStatus.DRAFT else submitted_at
+                    ),
                     dossier_type_schema=dossier_type_schema,
                     dossier_type_identity=dossier_type_identity,
                 )
@@ -1048,10 +1057,16 @@ class DossierService:
                     snapshot_json=snapshot,
                     canonical_hash=snapshot_sha256(snapshot),
                     submitted_by=principal.user_id,
-                    submitted_at=submitted_at,
+                    submitted_at=(
+                        None if expected_status is DossierStatus.DRAFT else submitted_at
+                    ),
                 )
                 self._repository.add_version(version)
                 await self._session.flush()
+                if expected_status is DossierStatus.DRAFT:
+                    # The immutable snapshot is staged while payment is pending.
+                    # It becomes an official submission only after fee settlement.
+                    version.submitted_at = None
                 claim = await self._repository.claim_content(
                     DossierContentClaim(
                         id=uuid4(),
@@ -1070,16 +1085,37 @@ class DossierService:
                     )
                 for evidence, _ in evidence_rows:
                     evidence.dossier_version_id = version.id
-                self._workflow.transition(
-                    dossier,
-                    target=DossierStatus.SUBMITTED,
-                    actor_user_id=principal.user_id,
-                    allowed_sources=(expected_status,),
-                    reason_code=reason_code,
-                )
                 dossier.current_version_no = version_no
-                dossier.submitted_at = submitted_at
-                if (
+                if test_payment_mode is not None and not principal.is_test_account:
+                    raise DossierForbiddenError()
+                if principal.is_test_account and expected_status is DossierStatus.DRAFT:
+                    mode = test_payment_mode or "SKIP"
+                    if mode == "SKIP":
+                        dossier.submission_fee_required = False
+                        dossier.submission_fee_snapshot = {
+                            "feeRequired": False,
+                            "feeAvailable": True,
+                            "amountMinor": 0,
+                            "currency": "VND",
+                            "description": "Phí đã được bỏ qua trong chế độ TEST.",
+                            "testPaymentMode": "SKIP",
+                        }
+                        order = None
+                    else:
+                        order = await self._submission_fees().reserve(
+                            dossier,
+                            actor=principal.user_id,
+                            key=f"submission:{dossier.id}",
+                            accepted_policy_version=accepted_fee_policy_version,
+                        )
+                        if order is not None:
+                            order.provider = "test"
+                            order.is_test = True
+                            order.metadata_json = {
+                                **order.metadata_json,
+                                "testPaymentMode": "MOCK",
+                            }
+                elif (
                     expected_status is DossierStatus.DRAFT
                     and dossier.submission_fee_paid_at is None
                     and dossier.submission_fee_waived_at is None
@@ -1097,9 +1133,19 @@ class DossierService:
                         dossier,
                         target=DossierStatus.PAYMENT_PENDING,
                         actor_user_id=principal.user_id,
-                        allowed_sources={DossierStatus.SUBMITTED},
+                        allowed_sources=(expected_status,),
                         reason_code="SUBMISSION_FEE_REQUIRED",
                     )
+                else:
+                    self._workflow.transition(
+                        dossier,
+                        target=DossierStatus.SUBMITTED,
+                        actor_user_id=principal.user_id,
+                        allowed_sources=(expected_status,),
+                        reason_code=reason_code,
+                    )
+                    dossier.submitted_at = submitted_at
+                    self._finalize_version(version, submitted_at)
                 await self._session.flush()
                 await self._session.refresh(
                     dossier,
@@ -1109,14 +1155,15 @@ class DossierService:
                     dossier=self._view(dossier, can_edit=False),
                     version=self._version_view(version),
                 )
-                similarity_version_id = version.id
                 self._audit_submission(
                     reason_code.lower(),
                     principal.user_id,
                     dossier_id,
                     normalized_key,
                 )
-                self._add_submitted_event(dossier, version)
+                if order is None:
+                    similarity_version_id = version.id
+                    self._add_submitted_event(dossier, version)
         if (
             similarity_version_id is not None
             and self._enqueue_similarity_detection is not None
@@ -1196,6 +1243,16 @@ class DossierService:
         )
 
     @staticmethod
+    def _finalize_version(version: DossierVersion, submitted_at: datetime) -> None:
+        snapshot = dict(version.snapshot_json)
+        submission = dict(snapshot.get("submission", {}))
+        submission["submittedAt"] = DossierService._iso_utc(submitted_at)
+        snapshot["submission"] = submission
+        version.snapshot_json = snapshot
+        version.canonical_hash = snapshot_sha256(snapshot)
+        version.submitted_at = submitted_at
+
+    @staticmethod
     def _content_fingerprint(
         dossier: Dossier,
         category: Category,
@@ -1260,7 +1317,7 @@ class DossierService:
         *,
         version_no: int,
         submitted_by: UUID,
-        submitted_at: datetime,
+        submitted_at: datetime | None,
         dossier_type_schema: Mapping[str, Any] | None,
         dossier_type_identity: Mapping[str, object] | None,
     ) -> dict[str, object]:
@@ -1361,7 +1418,9 @@ class DossierService:
             "submission": {
                 "versionNo": version_no,
                 "submittedBy": str(submitted_by),
-                "submittedAt": cls._iso_utc(submitted_at),
+                "submittedAt": (
+                    cls._iso_utc(submitted_at) if submitted_at is not None else None
+                ),
             },
         }
 
@@ -1754,6 +1813,7 @@ class DossierService:
             submission_fee_required=dossier.submission_fee_required,
             submission_fee_paid_at=dossier.submission_fee_paid_at,
             submission_fee_waived_at=dossier.submission_fee_waived_at,
+            is_test=dossier.is_test,
             claims=DossierService._claims_from_json(dossier.claims_json or []),
             claims_revision=dossier.claims_revision or 0,
         )

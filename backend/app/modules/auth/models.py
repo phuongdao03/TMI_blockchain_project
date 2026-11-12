@@ -4,6 +4,7 @@ from uuid import UUID, uuid4
 
 from sqlalchemy import (
     JSON,
+    Boolean,
     CheckConstraint,
     DateTime,
     Enum,
@@ -13,6 +14,7 @@ from sqlalchemy import (
     String,
     Text,
     Uuid,
+    false,
     func,
     text,
 )
@@ -85,6 +87,9 @@ class User(UtcTimestampMixin, Base):
     )
     disabled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    is_test_account: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=false()
+    )
     account_type: Mapped[AccountType | None] = mapped_column(
         Enum(
             AccountType,
@@ -178,6 +183,9 @@ class StaffInvitation(UtcTimestampMixin, Base):
     accepted_user_id: Mapped[UUID | None] = mapped_column(
         Uuid,
         ForeignKey("users.id", ondelete="SET NULL"),
+    )
+    is_test_account: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=false()
     )
 
 

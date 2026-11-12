@@ -19,6 +19,7 @@ export interface PaymentOrder {
   id: string;
   orderCode: string;
   dossierId: string;
+  isTest?: boolean;
   provider: string;
   providerOrderId: string | null;
   amountMinor: number;
@@ -47,6 +48,7 @@ export interface AdminPaymentOrder {
 }
 
 export interface PaymentHistoryFilters {
+  testMode?: "REAL" | "TEST" | "ALL";
   status?: PaymentStatus;
   createdFrom?: string;
   createdTo?: string;

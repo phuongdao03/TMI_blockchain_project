@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   BadgeDollarSign,
   CheckCircle2,
@@ -11,23 +11,26 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { startNavigationFeedback } from "@/components/ui/navigation-loading";
-import { dossierApi, paymentApi } from "@/lib/api/client";
+import { dossierApi, paymentApi, walletApi } from "@/lib/api/client";
 import type { DossierStatus } from "@/lib/api/types";
 
 export function DossierPaymentAction({
   dossierId,
   dossierStatus,
+  isTest = false,
   submissionFeeRequired = false,
   submissionFeePaidAt,
   submissionFeeWaivedAt,
 }: {
   dossierId: string;
   dossierStatus: DossierStatus;
+  isTest?: boolean;
   submissionFeeRequired?: boolean;
   submissionFeePaidAt?: string | null;
   submissionFeeWaivedAt?: string | null;
 }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const shouldLoadPayment = dossierStatus === "PAYMENT_PENDING";
   const obligation = useQuery({
     queryKey: ["fee-obligation", dossierId],
@@ -55,6 +58,21 @@ export function DossierPaymentAction({
     onSuccess: (result) => {
       startNavigationFeedback();
       router.push(`/payments/${result.paymentOrderId}`);
+    },
+  });
+  const simulatePayment = useMutation({
+    mutationFn: (outcome: "SUCCESS" | "FAILURE") => {
+      const orderId = activeOrder.data?.id;
+      if (!orderId) throw new Error("TEST payment order is unavailable.");
+      return walletApi.simulateTestPayment(orderId, outcome);
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["active-payment-order", dossierId],
+        }),
+        queryClient.invalidateQueries({ queryKey: ["dossiers"] }),
+      ]);
     },
   });
 
@@ -134,6 +152,37 @@ export function DossierPaymentAction({
               >
                 Xem khoản phí và thanh toán
               </Link>
+              {isTest && activeOrder.data.isTest ? (
+                <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4">
+                  <p className="text-sm font-bold">
+                    Mô phỏng kết quả thanh toán TEST
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      className="min-h-10 rounded-lg bg-neutral-950 px-3 text-xs font-bold text-white disabled:opacity-50"
+                      disabled={simulatePayment.isPending}
+                      onClick={() => simulatePayment.mutate("SUCCESS")}
+                      type="button"
+                    >
+                      Mô phỏng thành công
+                    </button>
+                    <button
+                      className="min-h-10 rounded-lg border border-neutral-400 px-3 text-xs font-bold disabled:opacity-50"
+                      disabled={simulatePayment.isPending}
+                      onClick={() => simulatePayment.mutate("FAILURE")}
+                      type="button"
+                    >
+                      Mô phỏng thất bại
+                    </button>
+                  </div>
+                  {simulatePayment.isError ? (
+                    <p className="mt-2 text-xs text-red-700" role="alert">
+                      Chưa ghi nhận được kết quả mô phỏng. Hãy tải lại và thử
+                      lại.
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
             </>
           ) : submissionFeeRequired && !activeOrder.isPending ? (
             <div>

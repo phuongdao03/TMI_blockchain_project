@@ -47,6 +47,7 @@ class StubPaymentService:
             id=self.order_id,
             order_code="PAY-000001",
             dossier_id=self.dossier_id,
+            is_test=False,
             provider="mock",
             provider_order_id="mock-order",
             amount_minor=1_000_000,
@@ -90,8 +91,9 @@ class StubPaymentService:
         *,
         status: PaymentStatus | None,
         limit: int,
+        test_mode: str = "REAL",
     ) -> tuple[AdminPaymentOrderView, ...]:
-        del principal, status, limit
+        del principal, status, limit, test_mode
         return (
             AdminPaymentOrderView(
                 order=self.view(),
@@ -120,8 +122,9 @@ class StubPaymentService:
         query: str | None,
         page: int,
         page_size: int,
+        test_mode: str = "REAL",
     ) -> tuple[AdminPaymentHistoryPageView, int]:
-        del principal, status, created_from, created_to, query
+        del principal, status, created_from, created_to, query, test_mode
         assert page == 2
         assert page_size == 10
         return (
@@ -164,8 +167,9 @@ class StubPaymentService:
         created_from: datetime | None,
         created_to: datetime | None,
         query: str | None,
+        test_mode: str = "REAL",
     ) -> tuple[AdminPaymentHistoryRowView, ...]:
-        del principal, status, created_from, created_to, query
+        del principal, status, created_from, created_to, query, test_mode
         return (self.history_row(),)
 
     async def issue_order(
@@ -412,6 +416,7 @@ def test_admin_payment_order_list_exposes_reconciliation_fields() -> None:
             "id": str(service.order_id),
             "orderCode": "PAY-000001",
             "dossierId": str(service.dossier_id),
+            "isTest": False,
             "feeObligationId": None,
             "purpose": None,
             "provider": "mock",
@@ -444,7 +449,7 @@ def test_admin_payment_history_list_and_detail_return_attributed_statuses() -> N
     listed = asyncio.run(
         _request(
             "GET",
-            "/api/v1/admin/payment-history?page=2&pageSize=10&query=owner%40example.vn",
+            "/api/v1/admin/payment-history?page=2&pageSize=10&testMode=TEST&query=owner%40example.vn",
             service,
         )
     )

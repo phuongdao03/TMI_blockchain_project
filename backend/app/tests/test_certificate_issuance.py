@@ -104,6 +104,7 @@ async def _issuance_service(
     status: DossierStatus,
     *,
     existing_certificate: bool = True,
+    is_test: bool = False,
     enforce_foreign_keys: bool = False,
     token_factory: Callable[[], str] | None = None,
     public_base_url: str = "https://cns.example",
@@ -130,6 +131,7 @@ async def _issuance_service(
         slug="issued-asset",
         summary="Public description approved with the dossier.",
         current_version_no=1,
+        is_test=is_test,
     )
     dossier._set_status_from_workflow(status)
     dossier_version = DossierVersion(
@@ -211,6 +213,23 @@ async def _issuance_service(
         token_factory=token_factory,
     )
     return service, engine, dossier.id
+
+
+def test_test_dossier_cannot_prepare_real_certificate() -> None:
+    async def scenario() -> None:
+        service, engine, dossier_id = await _issuance_service(
+            DossierStatus.PAID,
+            existing_certificate=False,
+            is_test=True,
+        )
+        with pytest.raises(CertificateConflictError, match="non-TEST"):
+            await service._prepare_certificate(dossier_id)  # noqa: SLF001
+        async with service._session.begin():  # noqa: SLF001
+            assert await service._certificates.get_by_dossier(dossier_id) is None  # noqa: SLF001
+        await service._session.close()  # noqa: SLF001
+        await engine.dispose()
+
+    asyncio.run(scenario())
 
 
 def test_prepare_certificate_uses_the_canonical_public_verify_route() -> None:

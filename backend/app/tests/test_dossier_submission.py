@@ -145,12 +145,13 @@ async def _draft_with_evidence(
     media: MediaAsset,
     *,
     fee_policy_mode: str = "LEGACY",
+    title: str = "Tác phẩm số CNS",
 ) -> tuple[DossierView, EvidenceView]:
     dossier = await service.create_dossier(
         principal,
         CreateDossier(
             category_id=CATEGORY_ID,
-            title="Tác phẩm số CNS",
+            title=title,
             summary="Bản mô tả tác phẩm.",
         ),
     )

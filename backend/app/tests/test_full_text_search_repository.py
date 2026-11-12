@@ -191,7 +191,8 @@ def test_filters_and_non_relevance_sort_are_bound_and_visibility_scoped() -> Non
     assert "public_works.visibility" in sql
     assert "public_works.publication_status" in sql
     assert "categories.slug" in sql
-    assert sql.count("EXISTS") == 2
+    assert sql.count("EXISTS") == 3
+    assert "dossiers.is_test IS true" in sql
     assert "organizations.code" in sql
     assert "public_works.certificate_id IS NOT NULL" in sql
     assert sql.index("public_works.view_count DESC") < sql.index(

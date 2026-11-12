@@ -24,7 +24,7 @@ class BillingSchema(BaseModel):
 
 class CreateFeePolicyRequest(BillingSchema):
     fee_type: Annotated[str, Field(min_length=2, max_length=64)]
-    dossier_type_id: UUID
+    dossier_type_id: UUID | None = None
     amount_minor: Annotated[int, Field(gt=0, le=10**12)]
     starts_at: datetime
     ends_at: datetime | None = None
@@ -49,7 +49,7 @@ class CancelFeePolicyRequest(BillingSchema):
 class FeePolicyData(BillingSchema):
     id: UUID
     fee_type: str
-    dossier_type_id: UUID
+    dossier_type_id: UUID | None
     version_no: int
     amount_minor: int
     currency: str
@@ -72,6 +72,16 @@ class RequestFeeWaiverRequest(BillingSchema):
     @field_validator("fee_type", "reason", mode="before")
     @classmethod
     def strip_text(cls, value: object) -> object:
+        return value.strip() if isinstance(value, str) else value
+
+
+class GrantFeeWaiverRequest(BillingSchema):
+    dossier_id: UUID
+    reason: Annotated[str, Field(min_length=5, max_length=1000)]
+
+    @field_validator("reason", mode="before")
+    @classmethod
+    def strip_reason(cls, value: object) -> object:
         return value.strip() if isinstance(value, str) else value
 
 

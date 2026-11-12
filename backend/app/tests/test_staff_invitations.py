@@ -19,11 +19,21 @@ from app.main import create_application
 from app.modules.audit.models import AuditLog
 from app.modules.audit.service import AuditService
 from app.modules.auth.firebase_provider import FirebaseClaims
-from app.modules.auth.models import AuthIdentity, Role, StaffInvitation, User, UserRole
+from app.modules.auth.models import (
+    AccountType,
+    AuthIdentity,
+    Role,
+    StaffInvitation,
+    User,
+    UserRole,
+)
 from app.modules.auth.schemas import (
     EmployeeInvitationRequest,
     StaffAccountData,
     StaffInvitationRequest,
+)
+from app.modules.auth.schemas import (
+    TestApplicantInvitationRequest as ApplicantInvitationPayload,
 )
 from app.modules.auth.security import OutboxPayloadCipher, hash_verification_token
 from app.modules.auth.session_service import AuthPrincipal
@@ -43,6 +53,7 @@ def test_staff_accounts_can_only_be_provisioned_through_invitations() -> None:
     assert "post" not in paths["/api/v1/admin/staff-accounts"]
     assert "post" in paths["/api/v1/admin/staff-invitations"]
     assert "post" in paths["/api/v1/admin/employee-invitations"]
+    assert "post" in paths["/api/v1/admin/test-applicant-invitations"]
     assert "post" in paths["/api/v1/auth/staff-invitations/accept"]
     assert "post" in paths["/api/v1/auth/employee-invitations/accept"]
     assert "/api/v1/auth/staff-mfa/recovery/authorize" not in paths
@@ -188,6 +199,99 @@ def test_employee_invitation_grants_only_user_role(tmp_path: Path) -> None:
                     request_id="replay",
                     user_agent="test",
                 )
+        await engine.dispose()
+
+    asyncio.run(scenario())
+
+
+def test_test_applicant_invitation_creates_a_new_marked_user_account(
+    tmp_path: Path,
+) -> None:
+    async def scenario() -> None:
+        database_path = tmp_path / "test-applicant-invite.sqlite3"
+        engine = create_async_engine(f"sqlite+aiosqlite:///{database_path.as_posix()}")
+        async with engine.begin() as connection:
+            await connection.run_sync(Base.metadata.create_all)
+        factory = async_sessionmaker(engine, expire_on_commit=False)
+        cipher = OutboxPayloadCipher.from_base64(
+            encoded_key="MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA=",
+            key_id="test-key",
+        )
+        admin = _admin()
+        async with factory() as session:
+            session.add_all(
+                [
+                    User(id=admin.user_id, email=admin.email, status="ACTIVE"),
+                    Role(code="USER"),
+                ]
+            )
+            await session.commit()
+            service = StaffInvitationService(
+                session=session,
+                payload_cipher=cipher,
+                invitation_ttl=timedelta(hours=24),
+                clock=lambda: NOW,
+            )
+            invitation = await service.create_test_applicant(
+                payload=ApplicantInvitationPayload(email="tester@example.com"),
+                principal=admin,
+                audit=AuditService(session),
+                request_id="test-applicant-invite",
+                user_agent="test",
+            )
+            assert invitation.role == "USER"
+            assert invitation.is_test_account is True
+            event = await session.scalar(
+                select(OutboxEvent).where(OutboxEvent.aggregate_id == invitation.id)
+            )
+            assert event is not None
+            token = json.loads(
+                cipher.decrypt(
+                    nonce=event.payload_nonce,
+                    ciphertext=event.payload_ciphertext,
+                    event_type=event.event_type,
+                    aggregate_id=event.aggregate_id,
+                )
+            )["invitation_token"]
+            await session.commit()
+
+            accepted = await service.accept_employee(
+                raw_token=token,
+                claims=FirebaseClaims(
+                    subject="firebase-test-applicant",
+                    email="tester@example.com",
+                    email_verified=True,
+                    name=None,
+                    picture=None,
+                ),
+                audit=AuditService(session),
+                request_id="test-applicant-accept",
+                user_agent="test",
+            )
+            user = await session.get(User, accepted.id)
+            assert user is not None
+            assert user.account_type is AccountType.INDIVIDUAL_APPLICANT
+            assert user.is_test_account is True
+            roles = tuple(
+                (
+                    await session.scalars(
+                        select(Role.code)
+                        .join(UserRole, UserRole.role_id == Role.id)
+                        .where(UserRole.user_id == accepted.id)
+                    )
+                ).all()
+            )
+            assert roles == ("USER",)
+            await session.commit()
+            with pytest.raises(DomainError) as duplicate_account:
+                await service.create_test_applicant(
+                    payload=ApplicantInvitationPayload(email="tester@example.com"),
+                    principal=admin,
+                    audit=AuditService(session),
+                    request_id="test-applicant-existing-user",
+                    user_agent="test",
+                )
+            assert duplicate_account.value.code == "TEST_APPLICANT_MUST_BE_NEW"
         await engine.dispose()
 
     asyncio.run(scenario())

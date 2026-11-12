@@ -13,6 +13,7 @@ from sqlalchemy import (
     Index,
     String,
     Uuid,
+    false,
     func,
 )
 from sqlalchemy.dialects.postgresql import JSONB
@@ -50,6 +51,9 @@ class PaymentOrder(UtcTimestampMixin, Base):
     )
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    is_test: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=false()
+    )
     order_code: Mapped[str] = mapped_column(
         String(32),
         nullable=False,

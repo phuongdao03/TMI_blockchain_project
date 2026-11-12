@@ -72,6 +72,7 @@ class StubSubmissionService:
         *,
         idempotency_key: str,
         accepted_fee_policy_version: int | None = None,
+        test_payment_mode: str | None = None,
     ) -> SubmissionView:
         self.keys.append(idempotency_key)
         self.accepted_fee_versions.append(accepted_fee_policy_version)
@@ -84,6 +85,7 @@ class StubSubmissionService:
         *,
         idempotency_key: str,
         accepted_fee_policy_version: int | None = None,
+        test_payment_mode: str | None = None,
     ) -> SubmissionView:
         self.keys.append(idempotency_key)
         self.accepted_fee_versions.append(accepted_fee_policy_version)

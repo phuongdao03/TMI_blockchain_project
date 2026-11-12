@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { FeeManagementWorkspace } from "./fee-management-workspace";
@@ -12,6 +12,7 @@ const { feeApi, dossierApi, auth } = vi.hoisted(() => ({
     approvePolicy: vi.fn(),
     cancelPolicy: vi.fn(),
     requestWaiver: vi.fn(),
+    grantSubmissionWaiver: vi.fn(),
     decideWaiver: vi.fn(),
   },
   dossierApi: { listTypes: vi.fn() },
@@ -96,15 +97,34 @@ describe("FeeManagementWorkspace", () => {
     expect(screen.queryByRole("button", { name: "Tạo chính sách" })).toBeNull();
   });
 
-  it("lets waiver requesters submit without exposing other waiver records", () => {
+  it("does not expose direct waiver administration to request-only accounts", () => {
     auth.user.permissions = ["billing.fees.waivers.request"];
     renderWorkspace();
 
-    expect(screen.getByRole("tab", { name: "Miễn giảm" })).toBeTruthy();
-    expect(
-      screen.getByRole("heading", { name: "Đề nghị miễn giảm" }),
-    ).toBeTruthy();
+    expect(screen.queryByRole("tab", { name: "Miễn giảm" })).toBeNull();
     expect(feeApi.listWaivers).not.toHaveBeenCalled();
     expect(screen.queryByRole("tab", { name: "Chính sách" })).toBeNull();
+  });
+
+  it("lets an authorized Admin grant a full submission waiver directly", async () => {
+    auth.user.permissions = ["billing.fees.waivers.approve"];
+    feeApi.grantSubmissionWaiver.mockResolvedValue({});
+    renderWorkspace();
+    fireEvent.click(screen.getByRole("tab", { name: "Miễn giảm" }));
+
+    fireEvent.change(screen.getByLabelText("Mã hồ sơ"), {
+      target: { value: "dossier-1" },
+    });
+    fireEvent.change(screen.getByLabelText("Lý do"), {
+      target: { value: "Approved by Admin" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Cấp miễn phí" }));
+
+    await waitFor(() =>
+      expect(feeApi.grantSubmissionWaiver).toHaveBeenCalledWith({
+        dossierId: "dossier-1",
+        reason: "Approved by Admin",
+      }),
+    );
   });
 });

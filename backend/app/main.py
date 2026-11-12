@@ -60,6 +60,9 @@ from app.api.v1.share_redirect import router as share_redirect_router
 from app.api.v1.staff_accounts import router as staff_accounts_router
 from app.api.v1.staff_invitations import employee_router as employee_invitations_router
 from app.api.v1.staff_invitations import router as staff_invitations_router
+from app.api.v1.staff_invitations import (
+    test_applicant_router as test_applicant_invitations_router,
+)
 from app.api.v1.supplements import router as supplements_router
 from app.api.v1.tasks import my_router as my_tasks_router
 from app.api.v1.tasks import router as tasks_router
@@ -329,6 +332,7 @@ def create_application(
     app.include_router(staff_accounts_router)
     app.include_router(staff_invitations_router)
     app.include_router(employee_invitations_router)
+    app.include_router(test_applicant_invitations_router)
     app.include_router(search_discovery_router)
     app.include_router(users_router)
     return app

@@ -54,6 +54,7 @@ class AuthPrincipal:
     roles: tuple[str, ...]
     account_type: AccountType | None = None
     permissions: tuple[str, ...] = ()
+    is_test_account: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -404,6 +405,7 @@ class SessionService:
             roles=roles,
             account_type=user.account_type,
             permissions=permissions,
+            is_test_account=user.is_test_account,
         )
 
     async def record_activity(

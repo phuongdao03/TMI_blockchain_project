@@ -9,6 +9,7 @@ from app.modules.billing.models import FeeObligationStatus
 class FeeObligationView:
     id: UUID
     dossier_id: UUID
+    is_test: bool
     owner_user_id: UUID
     price_catalog_version_id: UUID | None
     price_catalog_entry_id: UUID | None

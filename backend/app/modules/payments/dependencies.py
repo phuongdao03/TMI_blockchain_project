@@ -4,6 +4,7 @@ from typing import Annotated
 from fastapi import Depends
 
 from app.modules.auth.dependencies import SessionDependency, SettingsDependency
+from app.modules.auth.security import OutboxPayloadCipher
 from app.modules.payments.provider import build_payment_gateway
 from app.modules.payments.service import PaymentService
 from app.workers.celery_app import celery_app
@@ -15,6 +16,7 @@ async def get_payment_service(
 ) -> AsyncIterator[PaymentService]:
     provider_name = settings.payment_provider.strip().lower()
     gateway = build_payment_gateway(settings)
+    secret = settings.auth_outbox_encryption_key
     service = PaymentService(
         session=session,
         gateway=gateway,
@@ -25,6 +27,10 @@ async def get_payment_service(
         enqueue_certificate_issue=lambda dossier_id: celery_app.send_task(
             "app.workers.certificate_tasks.issue_certificate",
             args=[str(dossier_id)],
+        ),
+        payload_cipher=OutboxPayloadCipher.from_base64(
+            encoded_key=secret.get_secret_value() if secret is not None else "",
+            key_id=settings.auth_outbox_key_id,
         ),
     )
     try:

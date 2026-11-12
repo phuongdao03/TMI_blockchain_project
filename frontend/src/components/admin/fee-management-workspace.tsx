@@ -84,9 +84,7 @@ export function FeeManagementWorkspace({
     can("billing.fees.policies.approve") ||
     can("billing.fees.policies.cancel");
   const canUseWaiverTab =
-    can("billing.fees.read") ||
-    can("billing.fees.waivers.request") ||
-    can("billing.fees.waivers.approve");
+    can("billing.fees.read") || can("billing.fees.waivers.approve");
   const canListWaivers =
     can("billing.fees.read") || can("billing.fees.waivers.approve");
   const tabs: FeeTab[] = [
@@ -101,7 +99,7 @@ export function FeeManagementWorkspace({
   ];
   const [tab, setTab] = useState<FeeTab>(tabs[0] ?? "policies");
   const [policyTypeId, setPolicyTypeId] = useState("");
-  const [policyAmount, setPolicyAmount] = useState("");
+  const [policyAmount, setPolicyAmount] = useState("5000000");
   const [policyName, setPolicyName] = useState("");
   const [policyReason, setPolicyReason] = useState("");
   const [policyStartsAt, setPolicyStartsAt] = useState("");
@@ -111,8 +109,6 @@ export function FeeManagementWorkspace({
   const [waiverDossierId, setWaiverDossierId] = useState(
     initialDossierId ?? "",
   );
-  const [waiverFeeType, setWaiverFeeType] = useState("DOSSIER_SUBMISSION");
-  const [waiverAmount, setWaiverAmount] = useState("");
   const [waiverReason, setWaiverReason] = useState("");
   const [decisionReason, setDecisionReason] = useState("");
   const [actionError, setActionError] = useState("");
@@ -130,7 +126,9 @@ export function FeeManagementWorkspace({
   const dossierTypes = useQuery({
     queryKey: ["dossier-types"],
     queryFn: dossierApi.listTypes,
-    enabled: can("billing.fees.policies.create"),
+    enabled:
+      can("billing.fees.policies.create") &&
+      policyFeeType !== "DOSSIER_SUBMISSION",
   });
 
   const refreshFees = async () => {
@@ -144,7 +142,9 @@ export function FeeManagementWorkspace({
     mutationFn: () =>
       feeApi.createPolicy({
         feeType: policyFeeType,
-        dossierTypeId: policyTypeId,
+        ...(policyFeeType === "DOSSIER_SUBMISSION"
+          ? {}
+          : { dossierTypeId: policyTypeId }),
         amountMinor: Number(policyAmount),
         startsAt: new Date(policyStartsAt).toISOString(),
         ...(policyEndsAt
@@ -177,16 +177,13 @@ export function FeeManagementWorkspace({
     onSuccess: refreshFees,
     onError: (error) => setActionError(isFeeError(error)),
   });
-  const requestWaiver = useMutation({
+  const grantWaiver = useMutation({
     mutationFn: () =>
-      feeApi.requestWaiver({
+      feeApi.grantSubmissionWaiver({
         dossierId: waiverDossierId.trim(),
-        feeType: waiverFeeType,
-        amountMinor: Number(waiverAmount),
         reason: waiverReason.trim(),
       }),
     onSuccess: async () => {
-      setWaiverAmount("");
       setWaiverReason("");
       await refreshFees();
     },
@@ -225,7 +222,7 @@ export function FeeManagementWorkspace({
   const submitPolicy = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (
-      !policyTypeId ||
+      (policyFeeType !== "DOSSIER_SUBMISSION" && !policyTypeId) ||
       !Number.isSafeInteger(Number(policyAmount)) ||
       Number(policyAmount) <= 0 ||
       policyReason.trim().length < 5 ||
@@ -238,20 +235,14 @@ export function FeeManagementWorkspace({
   };
   const submitWaiver = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (
-      !waiverDossierId.trim() ||
-      !Number.isSafeInteger(Number(waiverAmount)) ||
-      Number(waiverAmount) <= 0 ||
-      waiverReason.trim().length < 5
-    )
-      return;
-    requestWaiver.mutate();
+    if (!waiverDossierId.trim() || waiverReason.trim().length < 5) return;
+    grantWaiver.mutate();
   };
 
   return (
     <div className="workspace-screen mx-auto max-w-7xl space-y-6 pb-12">
       <WorkspacePageHeader
-        description="Quản lý giao dịch, miễn giảm có phê duyệt kép, chính sách phí theo thời hạn và đối soát."
+        description="Quản lý giao dịch, cấp miễn phí có ghi nhận, chính sách phí theo thời hạn và đối soát."
         section="Tài chính"
         title="Quản lý phí hồ sơ"
       />
@@ -298,13 +289,13 @@ export function FeeManagementWorkspace({
 
       {tab === "waivers" ? (
         <section className="space-y-5" role="tabpanel">
-          {can("billing.fees.waivers.request") ? (
+          {can("billing.fees.waivers.approve") ? (
             <form
               className="grid gap-4 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5 md:grid-cols-2"
               onSubmit={submitWaiver}
             >
               <h2 className="text-lg font-bold md:col-span-2">
-                Đề nghị miễn giảm
+                Miễn toàn bộ phí nộp hồ sơ
               </h2>
               <label className="grid gap-1.5 text-sm font-semibold">
                 Mã hồ sơ
@@ -313,30 +304,6 @@ export function FeeManagementWorkspace({
                   onChange={(event) => setWaiverDossierId(event.target.value)}
                   required
                   value={waiverDossierId}
-                />
-              </label>
-              <label className="grid gap-1.5 text-sm font-semibold">
-                Loại phí
-                <select
-                  className={fieldClass}
-                  onChange={(event) => setWaiverFeeType(event.target.value)}
-                  value={waiverFeeType}
-                >
-                  <option value="DOSSIER_SUBMISSION">Phí nộp hồ sơ</option>
-                  <option value="CERTIFICATE_ISSUANCE">
-                    Phí cấp chứng nhận
-                  </option>
-                </select>
-              </label>
-              <label className="grid gap-1.5 text-sm font-semibold">
-                Số tiền đề nghị miễn (VND)
-                <input
-                  className={fieldClass}
-                  min="1"
-                  onChange={(event) => setWaiverAmount(event.target.value)}
-                  required
-                  type="number"
-                  value={waiverAmount}
                 />
               </label>
               <label className="grid gap-1.5 text-sm font-semibold">
@@ -351,18 +318,12 @@ export function FeeManagementWorkspace({
                 />
               </label>
               <div className="flex flex-wrap items-center gap-3 md:col-span-2">
-                <Button
-                  disabled={
-                    !can("billing.fees.waivers.request") ||
-                    requestWaiver.isPending
-                  }
-                  type="submit"
-                >
-                  Gửi đề nghị
+                <Button disabled={grantWaiver.isPending} type="submit">
+                  Cấp miễn phí
                 </Button>
                 <span className="text-xs text-[var(--theme-muted)]">
-                  Đề nghị có hiệu lực tối đa 30 ngày và cần người khác phê
-                  duyệt.
+                  Ghi nhận người cấp, thời điểm, mức phí gốc và lý do vào nhật
+                  ký.
                 </span>
               </div>
             </form>
@@ -484,24 +445,30 @@ export function FeeManagementWorkspace({
                   </option>
                 </select>
               </label>
-              <label className="grid gap-1.5 text-sm font-semibold">
-                Loại hồ sơ
-                <select
-                  className={fieldClass}
-                  onChange={(event) => setPolicyTypeId(event.target.value)}
-                  required
-                  value={policyTypeId}
-                >
-                  <option value="">Chọn loại hồ sơ</option>
-                  {dossierTypes.data
-                    ?.filter((type) => type.isActive)
-                    .map((type) => (
-                      <option key={type.id} value={type.id}>
-                        {type.name}
-                      </option>
-                    ))}
-                </select>
-              </label>
+              {policyFeeType !== "DOSSIER_SUBMISSION" ? (
+                <label className="grid gap-1.5 text-sm font-semibold">
+                  Loại hồ sơ
+                  <select
+                    className={fieldClass}
+                    onChange={(event) => setPolicyTypeId(event.target.value)}
+                    required
+                    value={policyTypeId}
+                  >
+                    <option value="">Chọn loại hồ sơ</option>
+                    {dossierTypes.data
+                      ?.filter((type) => type.isActive)
+                      .map((type) => (
+                        <option key={type.id} value={type.id}>
+                          {type.name}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+              ) : (
+                <p className="self-center text-sm text-[var(--theme-muted)]">
+                  Phí áp dụng chung cho mọi loại hồ sơ.
+                </p>
+              )}
               <label className="grid gap-1.5 text-sm font-semibold">
                 Mức phí (VND)
                 <input

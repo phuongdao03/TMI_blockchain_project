@@ -1,7 +1,7 @@
 import csv
 from datetime import datetime
 from io import BytesIO, StringIO
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 from uuid import UUID
 
 import qrcode
@@ -77,12 +77,16 @@ async def list_admin_payment_orders(
     principal: CurrentPrincipalDependency,
     service: PaymentServiceDependency,
     order_status: Annotated[PaymentStatus | None, Query(alias="status")] = None,
+    test_mode: Annotated[
+        Literal["REAL", "TEST", "ALL"], Query(alias="testMode")
+    ] = "REAL",
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
 ) -> SuccessEnvelope[list[AdminPaymentOrderData]]:
     orders = await service.list_admin_orders(
         principal,
         status=order_status,
         limit=limit,
+        test_mode=test_mode,
     )
     return SuccessEnvelope(
         data=[AdminPaymentOrderData.model_validate(item) for item in orders],
@@ -104,6 +108,9 @@ async def list_admin_payment_history(
     principal: CurrentPrincipalDependency,
     service: PaymentServiceDependency,
     order_status: Annotated[PaymentStatus | None, Query(alias="status")] = None,
+    test_mode: Annotated[
+        Literal["REAL", "TEST", "ALL"], Query(alias="testMode")
+    ] = "REAL",
     created_from: Annotated[datetime | None, Query(alias="createdFrom")] = None,
     created_to: Annotated[datetime | None, Query(alias="createdTo")] = None,
     query: Annotated[str | None, Query(max_length=120)] = None,
@@ -116,6 +123,7 @@ async def list_admin_payment_history(
         created_from=created_from,
         created_to=created_to,
         query=query,
+        test_mode=test_mode,
         page=page,
         page_size=page_size,
     )
@@ -141,6 +149,9 @@ async def export_admin_payment_history(
     principal: CurrentPrincipalDependency,
     service: PaymentServiceDependency,
     order_status: Annotated[PaymentStatus | None, Query(alias="status")] = None,
+    test_mode: Annotated[
+        Literal["REAL", "TEST", "ALL"], Query(alias="testMode")
+    ] = "REAL",
     created_from: Annotated[datetime | None, Query(alias="createdFrom")] = None,
     created_to: Annotated[datetime | None, Query(alias="createdTo")] = None,
     query: Annotated[str | None, Query(max_length=120)] = None,
@@ -151,6 +162,7 @@ async def export_admin_payment_history(
         created_from=created_from,
         created_to=created_to,
         query=query,
+        test_mode=test_mode,
     )
     output = StringIO(newline="")
     writer = csv.writer(output, lineterminator="\r\n")
@@ -164,6 +176,7 @@ async def export_admin_payment_history(
             "Amount minor",
             "Currency",
             "Status",
+            "Test mode",
             "Created at",
             "Paid at",
             "Description",
@@ -182,6 +195,7 @@ async def export_admin_payment_history(
                 order.amount_minor,
                 order.currency,
                 order.status.value,
+                "TEST" if order.is_test else "REAL",
                 order.created_at.isoformat(),
                 order.paid_at.isoformat() if order.paid_at else None,
                 order.description,

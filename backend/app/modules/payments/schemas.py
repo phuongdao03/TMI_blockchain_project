@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -28,6 +28,7 @@ class PaymentOrderData(PaymentSchema):
     id: UUID
     order_code: str
     dossier_id: UUID
+    is_test: bool = False
     fee_obligation_id: UUID | None = None
     purpose: str | None = None
     provider: str
@@ -96,6 +97,7 @@ class AdminPaymentHistoryDetailData(PaymentSchema):
 class FeeObligationData(PaymentSchema):
     id: UUID
     dossier_id: UUID
+    is_test: bool = False
     owner_user_id: UUID
     price_catalog_version_id: UUID | None = None
     price_catalog_entry_id: UUID | None = None
@@ -123,6 +125,10 @@ class IssuePaymentOrderRequest(PaymentSchema):
 
 class PaymentWaiverRequest(PaymentSchema):
     reason: Annotated[str, Field(min_length=5, max_length=500)]
+
+
+class TestPaymentSimulationRequest(PaymentSchema):
+    outcome: Literal["SUCCESS", "FAILURE"]
 
 
 class PaymentWaiverData(PaymentSchema):

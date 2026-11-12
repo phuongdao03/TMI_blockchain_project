@@ -546,9 +546,13 @@ class CertificateService:
             if replay is not None:
                 return replay
             dossier = await self._dossiers.get_by_id(dossier_id, for_update=True)
-            if dossier is None or dossier.status is not DossierStatus.PAID:
+            if (
+                dossier is None
+                or dossier.is_test
+                or dossier.status is not DossierStatus.PAID
+            ):
                 raise CertificateConflictError(
-                    "Only a paid dossier can prepare a certificate."
+                    "Only a paid non-TEST dossier can prepare a certificate."
                 )
             # The dossier row is the issuance mutex. Recheck after acquiring it
             # so two workers cannot create two certificates for one dossier.

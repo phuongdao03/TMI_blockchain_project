@@ -175,6 +175,7 @@ class BillingService:
         return FeeObligationView(
             id=obligation.id,
             dossier_id=obligation.dossier_id,
+            is_test=obligation.is_test,
             owner_user_id=obligation.owner_user_id,
             price_catalog_version_id=obligation.price_catalog_version_id,
             price_catalog_entry_id=obligation.price_catalog_entry_id,

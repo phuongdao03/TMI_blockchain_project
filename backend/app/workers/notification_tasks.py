@@ -218,6 +218,12 @@ async def _consume(event_id: UUID) -> None:
             )
             event_type = event.event_type
             aggregate_type = event.aggregate_type
+    if event_type == "dossier.submitted" and payload.get("submission_fee_paid") is True:
+        version_id = payload.get("dossier_version_id")
+        if isinstance(version_id, str):
+            from app.workers.similarity_tasks import detect_near_duplicate_candidates
+
+            detect_near_duplicate_candidates.delay(version_id)
         user_id_value = (
             payload.get("recipient_user_id")
             or payload.get("user_id")

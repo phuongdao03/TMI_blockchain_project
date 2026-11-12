@@ -1,4 +1,4 @@
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Header, Query, Request, status
@@ -603,12 +603,17 @@ async def submit_dossier(
     accepted_fee_policy_version: Annotated[
         int | None, Header(alias="X-Fee-Policy-Version", ge=1)
     ] = None,
+    test_payment_mode: Annotated[
+        Literal["SKIP", "MOCK"] | None,
+        Header(alias="X-Test-Payment-Mode"),
+    ] = None,
 ) -> SuccessEnvelope[SubmissionData]:
     result = await service.submit_dossier(
         principal,
         dossier_id,
         idempotency_key=idempotency_key,
         accepted_fee_policy_version=accepted_fee_policy_version,
+        test_payment_mode=test_payment_mode,
     )
     return SuccessEnvelope(
         data=_submission_data(result),

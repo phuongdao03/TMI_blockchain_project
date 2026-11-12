@@ -19,6 +19,7 @@ from app.modules.billing.schemas import (
     DecideFeeWaiverRequest,
     FeePolicyData,
     FeeWaiverData,
+    GrantFeeWaiverRequest,
     RequestFeeWaiverRequest,
 )
 
@@ -231,6 +232,29 @@ async def request_fee_waiver(
         dossier_id=payload.dossier_id,
         fee_type=payload.fee_type,
         amount_minor=payload.amount_minor,
+        reason=payload.reason,
+        actor_user_id=principal.user_id,
+    )
+    return SuccessEnvelope(
+        data=FeeWaiverData.model_validate(waiver),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.post(
+    "/fee-waivers/grant",
+    status_code=status.HTTP_201_CREATED,
+    response_model=SuccessEnvelope[FeeWaiverData],
+)
+async def grant_fee_waiver(
+    payload: GrantFeeWaiverRequest,
+    request: Request,
+    principal: CsrfProtectedPrincipalDependency,
+    session: SessionDependency,
+) -> SuccessEnvelope[FeeWaiverData]:
+    _require(principal, "billing.fees.waivers.approve")
+    waiver = await FeePolicyService(session).grant_submission_waiver(
+        dossier_id=payload.dossier_id,
         reason=payload.reason,
         actor_user_id=principal.user_id,
     )

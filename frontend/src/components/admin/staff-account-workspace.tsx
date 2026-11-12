@@ -49,6 +49,7 @@ export function StaffAccountWorkspace({
 } = {}) {
   const queryClient = useQueryClient();
   const [email, setEmail] = useState("");
+  const [testApplicantEmail, setTestApplicantEmail] = useState("");
   const [candidateSearch, setCandidateSearch] = useState("");
   const role: StaffAccountRole = "MODERATOR";
   const [query, setQuery] = useState("");
@@ -109,6 +110,21 @@ export function StaffAccountWorkspace({
       setConfirmInvite(false);
       setError(invitationErrorMessage(cause));
     },
+  });
+  const createTestApplicant = useMutation({
+    mutationFn: () =>
+      staffInvitationsApi.createTestApplicant(testApplicantEmail.trim()),
+    onSuccess: () => {
+      setTestApplicantEmail("");
+      setFeedback(
+        "Đã gửi lời mời tài khoản nộp hồ sơ TEST. Tài khoản được tạo mới với quyền USER.",
+      );
+      setError(null);
+      void queryClient.invalidateQueries({
+        queryKey: ["admin", "staff-invitations"],
+      });
+    },
+    onError: (cause) => setError(invitationErrorMessage(cause)),
   });
   const invitationAction = useMutation({
     mutationFn: ({
@@ -338,6 +354,7 @@ export function StaffAccountWorkspace({
                 >
                   <p className="truncate text-sm font-semibold text-neutral-900">
                     {invitation.email}
+                    {invitation.isTestAccount ? " · TEST" : ""}
                   </p>
                   <p className="mt-1 text-xs text-neutral-500">
                     {invitation.status === "PENDING"
@@ -388,6 +405,44 @@ export function StaffAccountWorkspace({
               ) : null}
             </div>
           </div>
+        </section>
+        <section className="rounded-2xl border border-amber-200 bg-amber-50 p-6">
+          <h2 className="text-lg font-bold text-neutral-950">
+            Tài khoản nộp hồ sơ TEST
+          </h2>
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-neutral-700">
+            Tạo người nộp hồ sơ riêng với quyền USER. Hệ thống đánh dấu TEST ở
+            máy chủ để chặn giao dịch tiền thật và dữ liệu công khai.
+          </p>
+          <form
+            className="mt-4 flex flex-col gap-3 sm:flex-row"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (testApplicantEmail.trim()) createTestApplicant.mutate();
+            }}
+          >
+            <label
+              className="min-w-0 flex-1 text-sm font-semibold"
+              htmlFor="test-applicant-email"
+            >
+              Email tài khoản mới
+              <input
+                className={inputClass}
+                id="test-applicant-email"
+                onChange={(event) => setTestApplicantEmail(event.target.value)}
+                required
+                type="email"
+                value={testApplicantEmail}
+              />
+            </label>
+            <button
+              className="mt-auto min-h-11 rounded-xl bg-neutral-950 px-4 text-sm font-bold text-white disabled:opacity-50"
+              disabled={createTestApplicant.isPending}
+              type="submit"
+            >
+              Gửi lời mời TEST
+            </button>
+          </form>
         </section>
         <section className="min-w-0 overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm">
           <div className="border-b border-neutral-200 px-5 py-5 sm:px-6">

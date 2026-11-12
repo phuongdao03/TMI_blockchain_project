@@ -23,7 +23,7 @@ from sqlalchemy.sql import Select
 from sqlalchemy.sql.elements import BindParameter, ColumnElement
 
 from app.modules.blockchain.models import Certificate, CertificateStatus
-from app.modules.dossiers.models import Category
+from app.modules.dossiers.models import Category, Dossier
 from app.modules.organizations.models import Organization, OrganizationStatus
 from app.modules.public.models import (
     PublicationStatus,
@@ -292,6 +292,12 @@ class SearchRepository:
 
         now = datetime.now(UTC)
         visible = (
+            ~exists(
+                select(1).where(
+                    Dossier.id == PublicWork.dossier_id,
+                    Dossier.is_test.is_(True),
+                )
+            ),
             PublicWork.deleted_at.is_(None),
             PublicWork.publication_status == PublicationStatus.PUBLISHED,
             PublicWork.visibility == PublicWorkVisibility.PUBLIC,
@@ -451,6 +457,12 @@ class SearchRepository:
         match: ColumnElement[bool],
     ) -> list[ColumnElement[bool]]:
         where_clauses: list[ColumnElement[bool]] = [
+            ~exists(
+                select(1).where(
+                    Dossier.id == PublicWork.dossier_id,
+                    Dossier.is_test.is_(True),
+                )
+            ),
             PublicWork.publication_status == PublicationStatus.PUBLISHED,
             PublicWork.visibility == PublicWorkVisibility.PUBLIC,
             PublicWork.deleted_at.is_(None),

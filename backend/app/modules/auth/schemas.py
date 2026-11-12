@@ -111,6 +111,12 @@ class EmployeeInvitationRequest(BaseModel):
     email: EmailStr
 
 
+class TestApplicantInvitationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    email: EmailStr
+
+
 class StaffInvitationAcceptRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
@@ -136,6 +142,7 @@ class StaffInvitationData(BaseModel):
     status: StaffInvitationStatus
     expires_at: datetime = Field(alias="expiresAt")
     created_at: datetime | None = Field(default=None, alias="createdAt")
+    is_test_account: bool = Field(default=False, alias="isTestAccount")
 
 
 class StaffInvitationAcceptedData(BaseModel):
@@ -196,6 +203,7 @@ class AuthUserData(BaseModel):
     permissions: tuple[str, ...]
     account_type: AccountType | None = Field(alias="accountType")
     is_employee: bool = Field(default=False, alias="isEmployee")
+    is_test_account: bool = Field(default=False, alias="isTestAccount")
 
 
 class UsernameLoginRequest(BaseModel):

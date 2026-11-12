@@ -21,6 +21,7 @@ from app.modules.auth.schemas import (
     EmployeeInvitationRequest,
     StaffInvitationData,
     StaffInvitationRequest,
+    TestApplicantInvitationRequest,
 )
 
 router = APIRouter(
@@ -29,6 +30,10 @@ router = APIRouter(
 )
 employee_router = APIRouter(
     prefix="/api/v1/admin/employee-invitations", tags=["employee invitations"]
+)
+test_applicant_router = APIRouter(
+    prefix="/api/v1/admin/test-applicant-invitations",
+    tags=["test applicant invitations"],
 )
 
 ADMIN_ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
@@ -51,6 +56,31 @@ async def create_employee_invitation(
     session: SessionDependency,
 ) -> SuccessEnvelope[StaffInvitationData]:
     result = await service.create_employee(
+        payload=payload,
+        principal=principal,
+        audit=AuditService(session),
+        request_id=request.state.request_id,
+        user_agent=request.headers.get("user-agent"),
+    )
+    return SuccessEnvelope(
+        data=result, meta=ResponseMeta(request_id=request.state.request_id)
+    )
+
+
+@test_applicant_router.post(
+    "",
+    status_code=status.HTTP_201_CREATED,
+    response_model=SuccessEnvelope[StaffInvitationData],
+    responses=ADMIN_ERROR_RESPONSES,
+)
+async def create_test_applicant_invitation(
+    payload: TestApplicantInvitationRequest,
+    request: Request,
+    principal: CsrfProtectedPrincipalDependency,
+    service: StaffInvitationServiceDependency,
+    session: SessionDependency,
+) -> SuccessEnvelope[StaffInvitationData]:
+    result = await service.create_test_applicant(
         payload=payload,
         principal=principal,
         audit=AuditService(session),

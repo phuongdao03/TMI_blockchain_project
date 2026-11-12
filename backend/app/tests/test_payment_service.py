@@ -1052,7 +1052,7 @@ def test_reconciliation_accepts_granular_permission_without_privileged_role() ->
 
 def test_admin_payment_list_includes_status_and_dossier_context() -> None:
     async def exercise() -> None:
-        service, _, engine, applicant = await _service()
+        service, sessions, engine, applicant = await _service()
         order = await service.create_order(
             applicant,
             DOSSIER_ID,
@@ -1082,6 +1082,39 @@ def test_admin_payment_list_includes_status_and_dossier_context() -> None:
         assert (
             len(await service.list_admin_orders(reconciler, status=None, limit=50)) == 1
         )
+        from app.modules.auth.models import User
+        from app.modules.dossiers.models import Dossier
+        from app.modules.payments.models import PaymentOrder
+
+        async with sessions() as session, session.begin():
+            dossier = await session.get(Dossier, DOSSIER_ID)
+            test_order = await session.get(PaymentOrder, order.id)
+            test_user = await session.get(User, applicant.user_id)
+            assert (
+                dossier is not None and test_order is not None and test_user is not None
+            )
+            dossier.is_test = True
+            test_order.is_test = True
+            test_user.is_test_account = True
+        assert await service.list_admin_orders(finance, status=None, limit=50) == ()
+        test_rows = await service.list_admin_orders(
+            finance, status=None, limit=50, test_mode="TEST"
+        )
+        all_rows = await service.list_admin_orders(
+            finance, status=None, limit=50, test_mode="ALL"
+        )
+        assert len(test_rows) == len(all_rows) == 1
+        test_history, total = await service.list_admin_history(
+            finance,
+            status=None,
+            created_from=None,
+            created_to=None,
+            query=None,
+            page=1,
+            page_size=10,
+            test_mode="TEST",
+        )
+        assert total == 1 and test_history.summary.total == 1
         await service.close()
         await engine.dispose()
 

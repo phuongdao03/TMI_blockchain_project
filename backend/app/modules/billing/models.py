@@ -5,6 +5,7 @@ from uuid import UUID, uuid4
 from sqlalchemy import (
     JSON,
     BigInteger,
+    Boolean,
     CheckConstraint,
     DateTime,
     Enum,
@@ -14,6 +15,7 @@ from sqlalchemy import (
     String,
     UniqueConstraint,
     Uuid,
+    false,
     func,
     text,
 )
@@ -154,6 +156,14 @@ class FeePolicy(UtcTimestampMixin, Base):
             "fee_type", "dossier_type_id", "version_no", name="uq_fee_policy_version"
         ),
         Index(
+            "uq_fee_policy_global_version",
+            "fee_type",
+            "version_no",
+            unique=True,
+            postgresql_where=text("dossier_type_id IS NULL"),
+            sqlite_where=text("dossier_type_id IS NULL"),
+        ),
+        Index(
             "ix_fee_policies_scope_effective",
             "fee_type",
             "dossier_type_id",
@@ -165,8 +175,8 @@ class FeePolicy(UtcTimestampMixin, Base):
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
     fee_type: Mapped[str] = mapped_column(String(64), nullable=False)
-    dossier_type_id: Mapped[UUID] = mapped_column(
-        Uuid, ForeignKey(DossierType.id, ondelete="RESTRICT"), nullable=False
+    dossier_type_id: Mapped[UUID | None] = mapped_column(
+        Uuid, ForeignKey(DossierType.id, ondelete="RESTRICT"), nullable=True
     )
     version_no: Mapped[int] = mapped_column(Integer, nullable=False)
     amount_minor: Mapped[int] = mapped_column(BigInteger, nullable=False)
@@ -298,6 +308,9 @@ class FeeObligation(UtcTimestampMixin, Base):
     )
 
     id: Mapped[UUID] = mapped_column(Uuid, primary_key=True, default=uuid4)
+    is_test: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=false()
+    )
     dossier_id: Mapped[UUID] = mapped_column(
         Uuid,
         ForeignKey("dossiers.id", ondelete="RESTRICT"),

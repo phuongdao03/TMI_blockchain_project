@@ -288,6 +288,11 @@ class AffiliateService:
         """Create one commission record inside the paid-service transaction."""
         if not self.affiliate_enabled or not self.direct_commission_enabled:
             return None
+        referred_is_test = await self.session.scalar(
+            select(User.is_test_account).where(User.id == referred_user_id)
+        )
+        if referred_is_test is True:
+            return None
         source = source_reference.strip()
         service = service_code.strip().upper()
         if (
@@ -1186,6 +1191,7 @@ class AffiliateService:
             )
             or user.disabled_at is not None
             or user.deleted_at is not None
+            or user.is_test_account
         ):
             raise _forbidden()
         role_codes = set(

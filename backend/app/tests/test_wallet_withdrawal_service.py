@@ -142,6 +142,45 @@ def test_withdrawal_request_reserves_only_commission_and_is_idempotent() -> None
     asyncio.run(exercise())
 
 
+def test_test_accounts_cannot_request_withdrawal() -> None:
+    async def exercise() -> None:
+        (
+            payment_service,
+            sessions,
+            engine,
+            owner,
+            cipher,
+            bank_id,
+        ) = await _prepared_withdrawal()
+        try:
+            async with sessions() as session, session.begin():
+                user = await session.get(User, owner.user_id)
+                assert user is not None
+                user.is_test_account = True
+            async with sessions() as session:
+                service = WalletWithdrawalService(
+                    session=session,
+                    cipher=cipher,
+                    withdrawal_feature_enabled=True,
+                )
+                with pytest.raises(DomainError) as error:
+                    await service.request_withdrawal(
+                        user_id=owner.user_id,
+                        bank_account_id=bank_id,
+                        amount_minor=100_000,
+                        idempotency_key="test-account-withdrawal",
+                    )
+                assert error.value.status_code == 403
+            async with sessions() as session:
+                assert await session.scalar(select(WithdrawalRequest.id)) is None
+                assert await session.scalar(select(PayoutAttempt.id)) is None
+        finally:
+            await payment_service.close()
+            await engine.dispose()
+
+    asyncio.run(exercise())
+
+
 def test_withdrawal_is_blocked_if_feature_or_identity_gate_is_unavailable() -> None:
     async def exercise() -> None:
         (

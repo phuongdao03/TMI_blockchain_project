@@ -8,6 +8,7 @@ from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import DomainError
+from app.modules.auth.models import User
 from app.modules.notifications.models import Notification
 from app.modules.payments.errors import (
     PaymentAmountMismatchError,
@@ -282,6 +283,13 @@ class WalletService:
         if type(amount) is not int:
             raise PaymentConflictError("Số tiền nạp không hợp lệ.")
         async with self.session.begin():
+            user = await self.session.get(User, user_id)
+            if user is not None and user.is_test_account:
+                raise DomainError(
+                    code="TEST_ACCOUNT_WALLET_DISABLED",
+                    message="TEST accounts cannot create real wallet top-ups.",
+                    status_code=403,
+                )
             await self.ledger.lock(user_id)
             order = await self.session.scalar(
                 select(WalletTopup).where(

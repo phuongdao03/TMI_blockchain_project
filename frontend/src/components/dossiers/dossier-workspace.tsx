@@ -414,6 +414,9 @@ export function DossierWorkspace({
   const [acceptedFeePolicyVersion, setAcceptedFeePolicyVersion] = useState<
     number | null
   >(null);
+  const [testPaymentMode, setTestPaymentMode] = useState<"SKIP" | "MOCK">(
+    "SKIP",
+  );
   const queryClient = useQueryClient();
   const detail = useQuery({
     queryKey: dossierKeys.detail(dossierId),
@@ -480,7 +483,12 @@ export function DossierWorkspace({
       const key = newIdempotencyKey();
       return detail.data?.status === "NEEDS_SUPPLEMENT"
         ? dossierApi.resubmit(dossierId, key)
-        : dossierApi.submit(dossierId, key, acceptedFeePolicyVersion);
+        : dossierApi.submit(
+            dossierId,
+            key,
+            acceptedFeePolicyVersion,
+            user?.isTestAccount ? testPaymentMode : undefined,
+          );
     },
     onError: () => void submissionFee.refetch(),
     onSuccess: refresh,
@@ -591,7 +599,11 @@ export function DossierWorkspace({
           className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-950 sm:p-6"
           role="status"
         >
-          <h2 className="text-xl font-bold">Hồ sơ đã được gửi thành công</h2>
+          <h2 className="text-xl font-bold">
+            {submit.data.dossier.status === "PAYMENT_PENDING"
+              ? "Hoàn tất phí nộp hồ sơ để gửi"
+              : "Hồ sơ đã được gửi thành công"}
+          </h2>
           <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
             <div>
               <dt className="text-emerald-800">Mã hồ sơ</dt>
@@ -602,9 +614,11 @@ export function DossierWorkspace({
             <div>
               <dt className="text-emerald-800">Thời gian gửi</dt>
               <dd className="mt-1 font-bold">
-                {new Date(submit.data.version.submittedAt).toLocaleString(
-                  "vi-VN",
-                )}
+                {submit.data.version.submittedAt
+                  ? new Date(submit.data.version.submittedAt).toLocaleString(
+                      "vi-VN",
+                    )
+                  : "Chờ hoàn tất thanh toán"}
               </dd>
             </div>
             <div>
@@ -738,6 +752,7 @@ export function DossierWorkspace({
       <DossierPaymentAction
         dossierId={dossier.id}
         dossierStatus={dossier.status}
+        isTest={dossier.isTest === true}
         submissionFeeRequired={dossier.submissionFeeRequired}
         submissionFeePaidAt={dossier.submissionFeePaidAt}
         submissionFeeWaivedAt={dossier.submissionFeeWaivedAt}
@@ -1196,6 +1211,7 @@ export function DossierWorkspace({
                       submit.isPending ||
                       submissionComplete ||
                       (dossier.status === "DRAFT" &&
+                        (!user?.isTestAccount || testPaymentMode === "MOCK") &&
                         (submissionFee.isPending ||
                           submissionFee.isError ||
                           submissionFee.data?.feeAvailable === false ||
@@ -1212,7 +1228,35 @@ export function DossierWorkspace({
                         ? "Nộp lại hồ sơ"
                         : "Nộp hồ sơ"}
                   </Button>
-                  {dossier.status === "DRAFT" ? (
+                  {dossier.status === "DRAFT" && user?.isTestAccount ? (
+                    <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4">
+                      <label className="grid max-w-sm gap-2 text-sm font-semibold">
+                        Chế độ phí TEST
+                        <select
+                          className="min-h-11 rounded-xl border border-amber-300 bg-white px-3"
+                          onChange={(event) =>
+                            setTestPaymentMode(
+                              event.target.value as "SKIP" | "MOCK",
+                            )
+                          }
+                          value={testPaymentMode}
+                        >
+                          <option value="SKIP">
+                            Bỏ qua phí để kiểm thử hồ sơ
+                          </option>
+                          <option value="MOCK">
+                            Mô phỏng thanh toán thành công / thất bại
+                          </option>
+                        </select>
+                      </label>
+                      <p className="mt-2 text-xs leading-5 text-neutral-700">
+                        Chế độ TEST không trừ ví, không gọi cổng thanh toán thật
+                        và không ghi doanh thu.
+                      </p>
+                    </div>
+                  ) : null}
+                  {dossier.status === "DRAFT" &&
+                  (!user?.isTestAccount || testPaymentMode === "MOCK") ? (
                     <div
                       className="mt-4 border-t border-[var(--theme-border)] pt-4 text-sm"
                       aria-live="polite"
@@ -1306,9 +1350,15 @@ export function DossierWorkspace({
                             Phiên bản {version.versionNo}
                           </p>
                           <p className="mt-1 text-xs text-neutral-500">
-                            Đã gửi{" "}
-                            {new Date(version.submittedAt).toLocaleString(
-                              "vi-VN",
+                            {version.submittedAt ? (
+                              <>
+                                Đã gửi{" "}
+                                {new Date(version.submittedAt).toLocaleString(
+                                  "vi-VN",
+                                )}
+                              </>
+                            ) : (
+                              "Chờ hoàn tất thanh toán"
                             )}
                           </p>
                         </div>

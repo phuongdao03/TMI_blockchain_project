@@ -62,7 +62,12 @@ def _cipher() -> OutboxPayloadCipher:
     )
 
 
-async def _seed(session: AsyncSession, *, thumbnail: bool = True) -> tuple[UUID, UUID]:
+async def _seed(
+    session: AsyncSession,
+    *,
+    thumbnail: bool = True,
+    is_test: bool = False,
+) -> tuple[UUID, UUID]:
     owner_id = uuid4()
     category_id = uuid4()
     dossier_id = uuid4()
@@ -87,6 +92,7 @@ async def _seed(session: AsyncSession, *, thumbnail: bool = True) -> tuple[UUID,
                 category_id=category_id,
                 title="Approved work",
                 summary="Approved public summary",
+                is_test=is_test,
                 _status=DossierStatus.CERTIFICATE_ISSUED,
             )
         )
@@ -157,6 +163,28 @@ def test_transition_table_rejects_undefined_paths() -> None:
     assert_transition(PublicationStatus.SUSPENDED, PublicationAction.HIDE)
     with pytest.raises(PublicationTransitionError):
         assert_transition(PublicationStatus.ARCHIVED, PublicationAction.PUBLISH)
+
+
+def test_test_dossier_cannot_be_published() -> None:
+    async def exercise() -> None:
+        engine = create_async_engine("sqlite+aiosqlite://")
+        sessions = async_sessionmaker(engine, expire_on_commit=False)
+        async with engine.begin() as connection:
+            await connection.run_sync(Base.metadata.create_all)
+        async with sessions() as session:
+            work_id, owner_id = await _seed(session, is_test=True)
+            with pytest.raises(PublicWorkNotPublishableError) as error:
+                await _service(session).publish(
+                    _principal(owner_id, "SUPER_ADMIN"),
+                    work_id,
+                    expected_version=1,
+                    visibility=PublicWorkVisibility.PUBLIC,
+                    request_id="publish-test-dossier",
+                )
+            assert "test_dossier_cannot_be_published" in error.value.details["reasons"]
+        await engine.dispose()
+
+    asyncio.run(exercise())
 
 
 def test_publication_context_locks_only_the_public_work_on_postgresql() -> None:

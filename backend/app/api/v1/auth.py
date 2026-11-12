@@ -216,6 +216,7 @@ async def upgrade_to_applicant(
             roles=result.roles,
             permissions=principal.permissions,
             accountType=result.account_type,
+            isTestAccount=principal.is_test_account,
         ),
         meta=ResponseMeta(request_id=request.state.request_id),
     )
@@ -289,6 +290,7 @@ async def exchange_firebase_token(
                 roles=principal.roles,
                 permissions=principal.permissions,
                 accountType=principal.account_type,
+                isTestAccount=principal.is_test_account,
             )
         ),
         meta=ResponseMeta(request_id=request.state.request_id),
@@ -323,6 +325,7 @@ async def username_login(
                 roles=principal.roles,
                 permissions=principal.permissions,
                 accountType=principal.account_type,
+                isTestAccount=principal.is_test_account,
             )
         ),
         meta=ResponseMeta(request_id=request.state.request_id),
@@ -485,6 +488,7 @@ async def login(
                 roles=principal.roles,
                 permissions=principal.permissions,
                 accountType=principal.account_type,
+                isTestAccount=principal.is_test_account,
             )
         ),
         meta=ResponseMeta(request_id=request.state.request_id),
@@ -604,6 +608,7 @@ async def me(
             roles=principal.roles,
             permissions=principal.permissions,
             accountType=principal.account_type,
+            isTestAccount=principal.is_test_account,
             isEmployee=is_employee,
         ),
         meta=ResponseMeta(request_id=request.state.request_id),

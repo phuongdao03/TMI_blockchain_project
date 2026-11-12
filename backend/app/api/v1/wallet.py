@@ -17,7 +17,11 @@ from app.modules.auth.dependencies import (
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.payments.dependencies import PaymentServiceDependency
 from app.modules.payments.errors import PaymentForbiddenError, PaymentNotFoundError
-from app.modules.payments.schemas import PaymentOrderData, PaymentSchema
+from app.modules.payments.schemas import (
+    PaymentOrderData,
+    PaymentSchema,
+    TestPaymentSimulationRequest,
+)
 from app.modules.payments.service import PaymentService
 from app.modules.wallet.models import WalletTopup
 from app.modules.wallet.service import read_wallet
@@ -46,7 +50,7 @@ class TopupData(PaymentSchema):
 
 
 def _require_non_admin_wallet(principal: AuthPrincipal) -> None:
-    if "SUPER_ADMIN" in principal.roles:
+    if "SUPER_ADMIN" in principal.roles or principal.is_test_account:
         raise PaymentForbiddenError()
 
 
@@ -190,6 +194,26 @@ async def pay_from_wallet(
 ) -> SuccessEnvelope[PaymentOrderData]:
     result = await service.pay_with_wallet(
         principal, order_id, idempotency_key=idempotency_key
+    )
+    return SuccessEnvelope(
+        data=PaymentOrderData.model_validate(result),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.post(
+    "/payment-orders/{order_id}/test-simulation",
+    response_model=SuccessEnvelope[PaymentOrderData],
+)
+async def simulate_test_payment(
+    order_id: UUID,
+    payload: TestPaymentSimulationRequest,
+    request: Request,
+    principal: CsrfProtectedPrincipalDependency,
+    service: PaymentServiceDependency,
+) -> SuccessEnvelope[PaymentOrderData]:
+    result = await service.simulate_test_payment(
+        principal, order_id, outcome=payload.outcome
     )
     return SuccessEnvelope(
         data=PaymentOrderData.model_validate(result),

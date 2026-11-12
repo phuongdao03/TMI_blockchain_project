@@ -66,11 +66,9 @@ class SubmissionFeeService:
             return snapshot
         if dossier.submission_fee_policy_mode != "DYNAMIC":
             return dict(NO_FEE_QUOTE)
-        if dossier.dossier_type_id is None:
-            return dict(UNAVAILABLE_FEE_QUOTE)
         policy = await self._policies.resolve(
             fee_type=FEE_TYPE,
-            dossier_type_id=dossier.dossier_type_id,
+            dossier_type_id=None,
             at=self.now,
         )
         if policy is None:
@@ -94,6 +92,7 @@ class SubmissionFeeService:
         accepted_policy_version: int | None,
     ) -> PaymentOrder | None:
         if dossier.status not in {
+            DossierStatus.DRAFT,
             DossierStatus.SUBMITTED,
             DossierStatus.PAYMENT_PENDING,
         }:
@@ -200,6 +199,7 @@ class SubmissionFeeService:
             obligation = FeeObligation(
                 id=uuid4(),
                 dossier_id=dossier.id,
+                is_test=dossier.is_test,
                 owner_user_id=dossier.owner_user_id,
                 price_catalog_version_id=None,
                 price_catalog_entry_id=None,
@@ -247,9 +247,10 @@ class SubmissionFeeService:
             id=identifier,
             order_code=str(identifier.int % 10**31),
             dossier_id=dossier.id,
+            is_test=dossier.is_test,
             fee_obligation_id=obligation.id,
             initiated_by_user_id=actor,
-            provider="wallet",
+            provider="test" if dossier.is_test else "wallet",
             amount_minor=due_amount,
             currency="VND",
             status=PaymentStatus.PENDING,
@@ -290,6 +291,7 @@ class SubmissionFeeService:
             id=identifier,
             order_code=str(identifier.int % 10**31),
             dossier_id=dossier.id,
+            is_test=dossier.is_test,
             initiated_by_user_id=actor,
             provider="wallet",
             amount_minor=amount,

@@ -7,14 +7,20 @@ from uuid import uuid4
 import pytest
 from sqlalchemy import func, select
 
+from app.db.outbox import OutboxEvent
 from app.modules.auth.models import User, UserStatus
 from app.modules.auth.security import OutboxPayloadCipher
 from app.modules.billing.fees import FeePolicyService
 from app.modules.billing.models import FeeObligation, FeePolicy
 from app.modules.dossiers.errors import DossierForbiddenError, DossierInvalidStateError
-from app.modules.dossiers.models import Dossier, DossierStatus, DossierType
+from app.modules.dossiers.models import (
+    Dossier,
+    DossierStatus,
+    DossierType,
+    DossierVersion,
+)
 from app.modules.dossiers.types import CreateEvidence
-from app.modules.payments.errors import PaymentNotFoundError
+from app.modules.payments.errors import PaymentConflictError, PaymentNotFoundError
 from app.modules.payments.gateway import MockPaymentGateway
 from app.modules.payments.models import PaymentOrder
 from app.modules.payments.service import PaymentService
@@ -56,7 +62,7 @@ async def _install_policy(service, sessions, owner, dossier_id, amount_minor):
         draft = await policies.create_draft(
             actor_user_id=owner.id,
             fee_type="DOSSIER_SUBMISSION",
-            dossier_type_id=dossier_type.id,
+            dossier_type_id=None,
             amount_minor=amount_minor,
             starts_at=NOW,
             ends_at=None,
@@ -68,6 +74,7 @@ async def _install_policy(service, sessions, owner, dossier_id, amount_minor):
 def test_submission_charge_is_once_and_payment_enters_review_not_issuance() -> None:
     async def exercise() -> None:
         service, sessions, engine, owner, media = await _build_service()
+        cipher = OutboxPayloadCipher(key=b"x" * 32, key_id="test-only")
         principal = _principal(owner)
         draft, _ = await _draft_with_evidence(
             service, principal, media, fee_policy_mode="DYNAMIC"
@@ -100,6 +107,11 @@ def test_submission_charge_is_once_and_payment_enters_review_not_issuance() -> N
             order = orders[0]
             assert order.provider == "wallet"
             assert order.amount_minor == 5_000_000
+            stored_dossier = await session.get(Dossier, draft.id)
+            version = await session.scalar(select(DossierVersion))
+            assert stored_dossier is not None and stored_dossier.submitted_at is None
+            assert version is not None and version.submitted_at is None
+            assert await session.scalar(select(func.count(OutboxEvent.id))) == 0
             session.add(Wallet(user_id=owner.id, balance_minor=6_000_000))
             await session.commit()
         issue = Mock()
@@ -112,6 +124,7 @@ def test_submission_charge_is_once_and_payment_enters_review_not_issuance() -> N
             order_ttl_seconds=3600,
             clock=lambda: NOW,
             enqueue_certificate_issue=issue,
+            payload_cipher=cipher,
         )
         from app.tests.test_payment_service import _webhook
 
@@ -132,6 +145,10 @@ def test_submission_charge_is_once_and_payment_enters_review_not_issuance() -> N
             stored = await session.get(Dossier, draft.id)
             assert stored is not None and stored.status is DossierStatus.SUBMITTED
             assert stored.submission_fee_paid_at is not None
+            assert stored.submitted_at == stored.submission_fee_paid_at
+            assert await session.scalar(select(func.count(OutboxEvent.id))) == 1
+            version = await session.scalar(select(DossierVersion))
+            assert version is not None and version.submitted_at == stored.submitted_at
             assert (await session.get(Wallet, owner.id)).balance_minor == 1_000_000
             assert await session.scalar(select(func.count(WalletJournal.id))) == 1
             stored._set_status_from_workflow(DossierStatus.NEEDS_SUPPLEMENT)
@@ -154,6 +171,110 @@ def test_submission_charge_is_once_and_payment_enters_review_not_issuance() -> N
         issue.assert_not_called()
         await payment.close()
         await precheck.close()
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_test_applicant_can_skip_or_simulate_without_wallet_debit() -> None:
+    async def exercise() -> None:
+        service, sessions, engine, owner, media = await _build_service()
+        test_principal = replace(_principal(owner), is_test_account=True)
+        skipped, _ = await _draft_with_evidence(
+            service,
+            test_principal,
+            media,
+            fee_policy_mode="DYNAMIC",
+            title="TEST skip without pricing",
+        )
+        assert skipped.is_test is True
+        skip_result = await service.submit_dossier(
+            test_principal,
+            skipped.id,
+            idempotency_key="test-skip",
+        )
+        assert skip_result.dossier.status is DossierStatus.SUBMITTED
+        async with sessions() as session:
+            stored = await session.get(Dossier, skipped.id)
+            assert stored is not None and stored.is_test
+            assert await session.scalar(select(func.count(FeeObligation.id))) == 0
+            assert await session.scalar(select(func.count(PaymentOrder.id))) == 0
+
+        mock_draft, _ = await _draft_with_evidence(
+            service,
+            test_principal,
+            media,
+            fee_policy_mode="DYNAMIC",
+            title="TEST payment simulation",
+        )
+        policy = await _install_policy(
+            service, sessions, owner, mock_draft.id, 5_000_000
+        )
+        pending = await service.submit_dossier(
+            test_principal,
+            mock_draft.id,
+            idempotency_key="test-mock-submit",
+            accepted_fee_policy_version=policy.version_no,
+            test_payment_mode="MOCK",
+        )
+        assert pending.dossier.status is DossierStatus.PAYMENT_PENDING
+        async with sessions() as session:
+            order = await session.scalar(select(PaymentOrder))
+            obligation = await session.scalar(select(FeeObligation))
+            assert order is not None and order.is_test and order.provider == "test"
+            assert obligation is not None and obligation.is_test
+
+        payment = PaymentService(
+            session=sessions(),
+            gateway=MockPaymentGateway(webhook_secret="test-payment-secret"),
+            provider_name="mock",
+            amount_minor=1_000_000,
+            currency="VND",
+            order_ttl_seconds=3600,
+            clock=lambda: NOW,
+            payload_cipher=OutboxPayloadCipher(key=b"x" * 32, key_id="test-only"),
+        )
+        with pytest.raises(PaymentConflictError, match="simulation action"):
+            await payment.pay_with_wallet(
+                test_principal, order.id, idempotency_key="test-no-wallet"
+            )
+        result = await payment.simulate_test_payment(
+            test_principal, order.id, outcome="SUCCESS"
+        )
+        assert result.status.value == "PAID"
+        async with sessions() as session:
+            stored = await session.get(Dossier, mock_draft.id)
+            assert stored is not None
+            assert stored.is_test and stored.status is DossierStatus.SUBMITTED
+            assert stored.submitted_at == stored.submission_fee_paid_at
+            assert await session.scalar(select(func.count(WalletJournal.id))) == 0
+            assert await session.scalar(select(func.count(OutboxEvent.id))) == 1
+        await payment.close()
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_regular_user_cannot_set_test_submit_mode() -> None:
+    async def exercise() -> None:
+        service, sessions, engine, owner, media = await _build_service()
+        principal = _principal(owner)
+        draft, _ = await _draft_with_evidence(
+            service, principal, media, fee_policy_mode="DYNAMIC"
+        )
+        with pytest.raises(DossierForbiddenError):
+            await service.submit_dossier(
+                principal,
+                draft.id,
+                idempotency_key="ordinary-fake-test",
+                test_payment_mode="SKIP",
+            )
+        async with sessions() as session:
+            stored = await session.get(Dossier, draft.id)
+            assert stored is not None
+            assert stored.status is DossierStatus.DRAFT and not stored.is_test
         await service.close()
         await engine.dispose()
 
