@@ -26,6 +26,10 @@ class AffiliateProfile(UtcTimestampMixin, Base):
         CheckConstraint(
             "length(referral_code) BETWEEN 8 AND 32", name="referral_code_length"
         ),
+        CheckConstraint(
+            "length(short_referral_code) BETWEEN 8 AND 10",
+            name="short_referral_code_length",
+        ),
         CheckConstraint("status IN ('ACTIVE', 'SUSPENDED')", name="valid_status"),
         Index("ix_affiliate_profiles_status", "status"),
     )
@@ -34,8 +38,28 @@ class AffiliateProfile(UtcTimestampMixin, Base):
         Uuid, ForeignKey("users.id", ondelete="RESTRICT"), primary_key=True
     )
     referral_code: Mapped[str] = mapped_column(String(32), nullable=False, unique=True)
+    short_referral_code: Mapped[str] = mapped_column(
+        String(10), nullable=False, unique=True
+    )
     status: Mapped[str] = mapped_column(
         String(16), nullable=False, default="ACTIVE", server_default="ACTIVE"
+    )
+
+
+class AffiliateReferralCodeAlias(Base):
+    __tablename__ = "affiliate_referral_code_aliases"
+    __table_args__ = (
+        Index("ix_affiliate_referral_code_aliases_owner", "affiliate_user_id"),
+    )
+
+    code: Mapped[str] = mapped_column(String(32), primary_key=True)
+    affiliate_user_id: Mapped[UUID] = mapped_column(
+        Uuid,
+        ForeignKey("affiliate_profiles.user_id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
     )
 
 
@@ -110,8 +134,10 @@ class AffiliateCommissionRuleSet(UtcTimestampMixin, Base):
         ),
         CheckConstraint("hold_days BETWEEN 0 AND 3650", name="valid_hold_days"),
         CheckConstraint(
-            "level2_enabled = false AND level2_rate_basis_points = 0",
-            name="level_two_disabled",
+            "level2_rate_basis_points BETWEEN 0 AND 10000 AND "
+            "((level2_enabled = true AND level2_rate_basis_points > 0) OR "
+            "(level2_enabled = false AND level2_rate_basis_points = 0))",
+            name="valid_level_two_rate",
         ),
         CheckConstraint(
             "(status = 'PUBLISHED' AND effective_from IS NOT NULL "
@@ -185,6 +211,7 @@ class AffiliateCommission(Base):
         CheckConstraint("amount_minor > 0", name="positive_source_amount"),
         CheckConstraint("commission_amount_minor >= 0", name="nonnegative_commission"),
         CheckConstraint("rate_basis_points BETWEEN 0 AND 10000", name="valid_rate"),
+        CheckConstraint("commission_level IN (1, 2)", name="valid_commission_level"),
         CheckConstraint(
             "status IN ('PENDING', 'ON_HOLD', 'AVAILABLE', 'REJECTED', 'REVERSED', "
             "'SUPPRESSED')",
@@ -239,6 +266,9 @@ class AffiliateCommission(Base):
     amount_minor: Mapped[int] = mapped_column(BigInteger, nullable=False)
     commission_amount_minor: Mapped[int] = mapped_column(BigInteger, nullable=False)
     rate_basis_points: Mapped[int] = mapped_column(Integer, nullable=False)
+    commission_level: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=1, server_default="1"
+    )
     currency: Mapped[str] = mapped_column(
         String(3), nullable=False, default="VND", server_default="VND"
     )

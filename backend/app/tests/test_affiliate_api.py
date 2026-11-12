@@ -63,6 +63,16 @@ def test_affiliate_api_exposes_real_dashboard_attribution_and_admin_rules() -> N
                 0
             ]
             app.dependency_overrides[get_settings] = lambda: settings
+            openapi = app.openapi()
+            assert (
+                "/api/v1/admin/affiliate/profiles/{user_id}/status-history"
+                in openapi["paths"]
+            )
+            rule_schema = openapi["components"]["schemas"][
+                "CommissionRuleSetCreateRequest"
+            ]["properties"]
+            assert "level2Enabled" in rule_schema
+            assert "level2RateBasisPoints" in rule_schema
 
             async with httpx.AsyncClient(
                 transport=httpx.ASGITransport(app=app),
@@ -131,7 +141,9 @@ def test_affiliate_api_exposes_real_dashboard_attribution_and_admin_rules() -> N
                     str(owner.user_id),
                     str(referred_id),
                 }
-                assert all("email" not in row for row in profile_rows)
+                assert {row["userId"]: row["email"] for row in profile_rows}[
+                    str(owner.user_id)
+                ] == "owner@cnsgroup.vn"
                 profile_referrals = await client.get(
                     f"/api/v1/admin/affiliate/profiles/{owner.user_id}/referrals"
                 )
@@ -150,9 +162,44 @@ def test_affiliate_api_exposes_real_dashboard_attribution_and_admin_rules() -> N
                 )
                 assert restored.status_code == 200
                 assert restored.json()["data"]["status"] == "ACTIVE"
+                status_history = await client.get(
+                    f"/api/v1/admin/affiliate/profiles/{owner.user_id}/status-history"
+                )
+                assert status_history.status_code == 200
+                assert [row["status"] for row in status_history.json()["data"]] == [
+                    "ACTIVE",
+                    "SUSPENDED",
+                ]
                 rule_rows = await client.get("/api/v1/admin/affiliate/commission-rules")
                 assert rule_rows.status_code == 200
                 assert rule_rows.json()["data"][0]["enabled"] is False
+                created_rules = await client.post(
+                    "/api/v1/admin/affiliate/commission-rules",
+                    json={
+                        "enabled": False,
+                        "attributionWindowDays": 30,
+                        "holdDays": 30,
+                        "level2Enabled": True,
+                        "level2RateBasisPoints": 125,
+                        "rates": [
+                            {
+                                "serviceCode": "MEMBERSHIP",
+                                "directRateBasisPoints": 500,
+                            }
+                        ],
+                    },
+                )
+                assert created_rules.status_code == 201
+                created_rule_data = created_rules.json()["data"]
+                assert created_rule_data["level2Enabled"] is True
+                assert created_rule_data["level2RateBasisPoints"] == 125
+                assert created_rule_data["effectiveFrom"] is None
+                published = await client.post(
+                    "/api/v1/admin/affiliate/commission-rules/"
+                    f"{created_rule_data['id']}/publish"
+                )
+                assert published.status_code == 200
+                assert published.json()["data"]["effectiveFrom"] is not None
                 admin_commissions = await client.get(
                     "/api/v1/admin/affiliate/commissions"
                 )

@@ -2,6 +2,8 @@ import secrets
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from hashlib import sha256
+from typing import cast as type_cast
 from uuid import NAMESPACE_URL, UUID, uuid5
 
 from sqlalchemy import Select, String, and_, case, cast, func, or_, select
@@ -17,6 +19,7 @@ from app.modules.affiliate.models import (
     AffiliateCommissionRuleSet,
     AffiliateProfile,
     AffiliateReferralClick,
+    AffiliateReferralCodeAlias,
 )
 from app.modules.audit.models import AuditActorType, AuditLog
 from app.modules.auth.models import Role, User, UserRole, UserStatus
@@ -53,11 +56,20 @@ class AffiliateReferralSummary:
 @dataclass(frozen=True, slots=True)
 class AffiliateProfileAdminSummary:
     user_id: UUID
+    email: str
     referral_code: str
     status: str
     created_at: datetime
     click_count: int
     attributed_user_count: int
+
+
+@dataclass(frozen=True, slots=True)
+class AffiliateProfileStatusChange:
+    status: str
+    reason: str
+    actor_user_id: UUID | None
+    created_at: datetime
 
 
 @dataclass(frozen=True, slots=True)
@@ -81,7 +93,12 @@ class AffiliateService:
         self.direct_commission_enabled = direct_commission_enabled
         self._clock = clock or (lambda: datetime.now(UTC))
         self._code_factory = code_factory or (
-            lambda: f"THV{secrets.token_hex(6).upper()}"
+            lambda: (
+                "THV"
+                + "".join(
+                    secrets.choice("ABCDEFGHJKLMNPQRSTUVWXYZ23456789") for _ in range(7)
+                )
+            )
         )
 
     async def dashboard(self, user_id: UUID) -> AffiliateDashboard:
@@ -162,14 +179,27 @@ class AffiliateService:
             return profile
 
         for _ in range(3):
+            code = _normalize_code(self._code_factory())
+            if not 8 <= len(code) <= 10 or "-" in code:
+                continue
+            if await self.session.get(AffiliateReferralCodeAlias, code) is not None:
+                continue
             profile = AffiliateProfile(
                 user_id=user_id,
-                referral_code=self._code_factory(),
+                referral_code=code,
+                short_referral_code=code,
                 status="ACTIVE",
             )
             try:
                 async with self.session.begin_nested():
                     self.session.add(profile)
+                    await self.session.flush()
+                    self.session.add(
+                        AffiliateReferralCodeAlias(
+                            code=code,
+                            affiliate_user_id=user_id,
+                        )
+                    )
                     await self.session.flush()
             except IntegrityError as exc:
                 existing = await self.session.get(AffiliateProfile, user_id)
@@ -184,6 +214,24 @@ class AffiliateService:
             message="Không thể tạo hồ sơ giới thiệu lúc này.",
             status_code=503,
         )
+
+    async def _profile_for_referral_code(
+        self, code: str, *, active_only: bool = True
+    ) -> AffiliateProfile | None:
+        statement = select(AffiliateProfile).where(
+            or_(
+                AffiliateProfile.referral_code == code,
+                AffiliateProfile.short_referral_code == code,
+                AffiliateProfile.user_id.in_(
+                    select(AffiliateReferralCodeAlias.affiliate_user_id).where(
+                        AffiliateReferralCodeAlias.code == code
+                    )
+                ),
+            )
+        )
+        if active_only:
+            statement = statement.where(AffiliateProfile.status == "ACTIVE")
+        return type_cast(AffiliateProfile | None, await self.session.scalar(statement))
 
     async def capture_signup_referral_in_current_transaction(
         self,
@@ -211,12 +259,7 @@ class AffiliateService:
             raise _disabled()
         code = _normalize_code(referral_code)
         async with self.session.begin():
-            profile = await self.session.scalar(
-                select(AffiliateProfile).where(
-                    AffiliateProfile.referral_code == code,
-                    AffiliateProfile.status == "ACTIVE",
-                )
-            )
+            profile = await self._profile_for_referral_code(code)
             if profile is None:
                 raise _not_found()
             try:
@@ -376,6 +419,7 @@ class AffiliateService:
             amount_minor=amount_minor,
             commission_amount_minor=commission_amount,
             rate_basis_points=rate,
+            commission_level=1,
             status=status,
             earned_at=now,
             hold_until=now + timedelta(days=current.rule_set.hold_days),
@@ -416,6 +460,96 @@ class AffiliateService:
                 },
             )
         )
+
+        second_rate = current.rule_set.level2_rate_basis_points
+        if (
+            current.rule_set.enabled
+            and current.rule_set.level2_enabled
+            and second_rate > 0
+        ):
+            upstream_attribution = await self.session.scalar(
+                select(AffiliateAttribution)
+                .where(
+                    AffiliateAttribution.referred_user_id == profile.user_id,
+                    AffiliateAttribution.attributed_at <= now,
+                    AffiliateAttribution.expires_at >= now,
+                )
+                .with_for_update()
+            )
+            if (
+                upstream_attribution is not None
+                and upstream_attribution.affiliate_user_id
+                not in {profile.user_id, referred_user_id}
+            ):
+                upstream = await self.session.get(
+                    AffiliateProfile, upstream_attribution.affiliate_user_id
+                )
+                if upstream is not None and upstream.status == "ACTIVE":
+                    try:
+                        await self._require_eligible_user(upstream.user_id)
+                    except DomainError as exc:
+                        if exc.status_code != 403:
+                            raise
+                    else:
+                        second_amount = amount_minor * second_rate // 10_000
+                        second_source = _level_two_source_reference(source)
+                        second = AffiliateCommission(
+                            affiliate_user_id=upstream.user_id,
+                            referred_user_id=referred_user_id,
+                            rule_set_id=current.rule_set.id,
+                            rule_set_version=current.rule_set.version_no,
+                            service_code=service,
+                            source_reference=second_source,
+                            amount_minor=amount_minor,
+                            commission_amount_minor=second_amount,
+                            rate_basis_points=second_rate,
+                            commission_level=2,
+                            status=("PENDING" if second_amount > 0 else "SUPPRESSED"),
+                            earned_at=now,
+                            hold_until=now + timedelta(days=current.rule_set.hold_days),
+                        )
+                        try:
+                            async with self.session.begin_nested():
+                                self.session.add(second)
+                                await self.session.flush()
+                        except IntegrityError as exc:
+                            existing_second = await self.session.scalar(
+                                select(AffiliateCommission).where(
+                                    AffiliateCommission.source_reference
+                                    == second_source
+                                )
+                            )
+                            if not (
+                                isinstance(existing_second, AffiliateCommission)
+                                and existing_second.commission_level == 2
+                                and existing_second.affiliate_user_id
+                                == upstream.user_id
+                                and existing_second.referred_user_id == referred_user_id
+                                and existing_second.service_code == service
+                                and existing_second.amount_minor == amount_minor
+                            ):
+                                raise _conflict(
+                                    "Giao dịch nguồn đã được gắn với hoa hồng khác."
+                                ) from exc
+                        else:
+                            self.session.add(
+                                AuditLog(
+                                    actor_type=AuditActorType.SERVICE,
+                                    actor_service="affiliate",
+                                    action="affiliate.commission.recorded",
+                                    resource_type="affiliate_commission",
+                                    resource_id=str(second.id),
+                                    after_json={
+                                        "source_reference": second_source,
+                                        "service_code": service,
+                                        "commission_level": 2,
+                                        "amount_minor": amount_minor,
+                                        "commission_amount_minor": second_amount,
+                                        "rule_set_version": current.rule_set.version_no,
+                                        "status": second.status,
+                                    },
+                                )
+                            )
         await self.session.flush()
         return commission
 
@@ -532,8 +666,14 @@ class AffiliateService:
                 statement = statement.where(
                     or_(
                         AffiliateProfile.referral_code.ilike(pattern),
+                        AffiliateProfile.short_referral_code.ilike(pattern),
                         User.email.ilike(pattern),
                         cast(AffiliateProfile.user_id, String).ilike(pattern),
+                        AffiliateProfile.user_id.in_(
+                            select(AffiliateReferralCodeAlias.affiliate_user_id).where(
+                                AffiliateReferralCodeAlias.code.ilike(pattern)
+                            )
+                        ),
                     )
                 )
             rows = await self.session.execute(
@@ -573,9 +713,7 @@ class AffiliateService:
         ):
             raise DomainError(
                 code="AFFILIATE_PROFILE_REVIEW_INVALID",
-                message=(
-                    "Tráº¡ng thÃ¡i hoáº·c lÃ½ do xá»­ lÃ½ Affiliate khÃ´ng há»£p lá»‡."
-                ),
+                message="Trạng thái hoặc lý do xử lý Affiliate không hợp lệ.",
                 status_code=422,
             )
         async with self.session.begin():
@@ -619,8 +757,43 @@ class AffiliateService:
             assert row is not None
             return self._to_profile_admin_summary(row)
 
+    async def list_profile_status_history(
+        self, *, user_id: UUID, limit: int = 50
+    ) -> tuple[AffiliateProfileStatusChange, ...]:
+        async with self.session.begin():
+            if await self.session.get(AffiliateProfile, user_id) is None:
+                raise _not_found()
+            rows = await self.session.scalars(
+                select(AuditLog)
+                .where(
+                    AuditLog.resource_type == "affiliate_profile",
+                    AuditLog.resource_id == str(user_id),
+                    AuditLog.action.in_(
+                        ("affiliate.profile.suspended", "affiliate.profile.restored")
+                    ),
+                )
+                .order_by(AuditLog.created_at.desc(), AuditLog.id)
+                .limit(limit)
+            )
+            history = []
+            for row in rows:
+                reason = (row.after_json or {}).get("reason")
+                history.append(
+                    AffiliateProfileStatusChange(
+                        status=(
+                            "SUSPENDED"
+                            if row.action == "affiliate.profile.suspended"
+                            else "ACTIVE"
+                        ),
+                        reason=reason if isinstance(reason, str) else "",
+                        actor_user_id=row.actor_user_id,
+                        created_at=row.created_at,
+                    )
+                )
+            return tuple(history)
+
     @staticmethod
-    def _profile_admin_statement() -> Select[tuple[AffiliateProfile, int, int]]:
+    def _profile_admin_statement() -> Select[tuple[AffiliateProfile, int, int, str]]:
         click_count = (
             select(func.count())
             .select_from(AffiliateReferralClick)
@@ -635,18 +808,19 @@ class AffiliateService:
             .correlate(AffiliateProfile)
             .scalar_subquery()
         )
-        return select(AffiliateProfile, click_count, attributed_user_count).join(
-            User, User.id == AffiliateProfile.user_id
-        )
+        return select(
+            AffiliateProfile, click_count, attributed_user_count, User.email
+        ).join(User, User.id == AffiliateProfile.user_id)
 
     @staticmethod
     def _to_profile_admin_summary(
-        row: Row[tuple[AffiliateProfile, int, int]],
+        row: Row[tuple[AffiliateProfile, int, int, str]],
     ) -> AffiliateProfileAdminSummary:
         profile = row[0]
         return AffiliateProfileAdminSummary(
             user_id=profile.user_id,
-            referral_code=profile.referral_code,
+            email=row[3],
+            referral_code=profile.short_referral_code,
             status=profile.status,
             created_at=profile.created_at,
             click_count=int(row[1] or 0),
@@ -941,19 +1115,12 @@ class AffiliateService:
             .with_for_update()
         )
         if existing is not None:
-            referrer = await self.session.get(
-                AffiliateProfile, existing.affiliate_user_id
-            )
-            if referrer is not None and referrer.referral_code == code:
+            referrer = await self._profile_for_referral_code(code, active_only=False)
+            if referrer is not None and referrer.user_id == existing.affiliate_user_id:
                 return existing
             raise _conflict("Tài khoản đã được gắn với mã giới thiệu khác.")
 
-        referrer = await self.session.scalar(
-            select(AffiliateProfile).where(
-                AffiliateProfile.referral_code == code,
-                AffiliateProfile.status == "ACTIVE",
-            )
-        )
+        referrer = await self._profile_for_referral_code(code)
         if referrer is None:
             raise _not_found()
         if referrer.user_id == referred_user_id:
@@ -1052,8 +1219,16 @@ class AffiliateService:
         attribution_window_days: int,
         hold_days: int,
         rates: tuple[tuple[str, int], ...],
+        level2_enabled: bool = False,
+        level2_rate_basis_points: int = 0,
     ) -> CommissionRuleSetView:
-        _validate_rule_input(attribution_window_days, hold_days, rates)
+        _validate_rule_input(
+            attribution_window_days,
+            hold_days,
+            rates,
+            level2_enabled=level2_enabled,
+            level2_rate_basis_points=level2_rate_basis_points,
+        )
         async with self.session.begin():
             latest = await self.session.scalar(
                 select(AffiliateCommissionRuleSet)
@@ -1068,8 +1243,8 @@ class AffiliateService:
                 enabled=enabled,
                 attribution_window_days=attribution_window_days,
                 hold_days=hold_days,
-                level2_enabled=False,
-                level2_rate_basis_points=0,
+                level2_enabled=level2_enabled,
+                level2_rate_basis_points=level2_rate_basis_points,
             )
             self.session.add(rule_set)
             await self.session.flush()
@@ -1094,7 +1269,8 @@ class AffiliateService:
                         "enabled": enabled,
                         "attribution_window_days": attribution_window_days,
                         "hold_days": hold_days,
-                        "level2_enabled": False,
+                        "level2_enabled": level2_enabled,
+                        "level2_rate_basis_points": level2_rate_basis_points,
                         "rates": [
                             {"service_code": code, "direct_rate_basis_points": bps}
                             for code, bps in rates
@@ -1253,15 +1429,37 @@ def _normalize_code(value: str) -> str:
     return code
 
 
+def _level_two_source_reference(source: str) -> str:
+    suffix = ":L2"
+    if len(source) + len(suffix) <= 160:
+        return source + suffix
+    return "L2:" + sha256(source.encode("utf-8")).hexdigest()
+
+
 def _validate_rule_input(
     attribution_window_days: int,
     hold_days: int,
     rates: tuple[tuple[str, int], ...],
+    *,
+    level2_enabled: bool,
+    level2_rate_basis_points: int,
 ) -> None:
     if not 0 <= attribution_window_days <= 3650 or not 0 <= hold_days <= 3650:
         raise DomainError(
             code="AFFILIATE_RULE_INVALID",
             message="Thời hạn chính sách không hợp lệ.",
+            status_code=422,
+        )
+    if (
+        type(level2_enabled) is not bool
+        or type(level2_rate_basis_points) is not int
+        or not 0 <= level2_rate_basis_points <= 10_000
+        or (level2_enabled and level2_rate_basis_points == 0)
+        or (not level2_enabled and level2_rate_basis_points != 0)
+    ):
+        raise DomainError(
+            code="AFFILIATE_RULE_INVALID",
+            message="Tỷ lệ hoa hồng cấp 2 không hợp lệ.",
             status_code=422,
         )
     seen: set[str] = set()

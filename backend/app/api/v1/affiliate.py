@@ -11,6 +11,7 @@ from app.modules.affiliate.schemas import (
     AffiliateCommissionData,
     AffiliateDashboardData,
     AffiliateProfileAdminData,
+    AffiliateProfileStatusChangeData,
     AffiliateProfileStatusRequest,
     AffiliateReferralSummaryData,
     CommissionRateData,
@@ -68,7 +69,7 @@ def _require_profile_management(principal: AuthPrincipal) -> None:
         PolicyRequirement(permission="affiliate.profiles.manage"),
         lambda: DomainError(
             code="AFFILIATE_FORBIDDEN",
-            message="Báº¡n khÃ´ng cÃ³ quyá»n quáº£n lÃ½ há»“ sÆ¡ Affiliate.",
+            message="Bạn không có quyền quản lý hồ sơ giới thiệu.",
             status_code=403,
         ),
     )
@@ -108,7 +109,7 @@ async def get_affiliate_dashboard(
 ) -> SuccessEnvelope[AffiliateDashboardData]:
     dashboard = await service.dashboard(principal.user_id)
     response.headers["Cache-Control"] = "no-store"
-    code = dashboard.profile.referral_code
+    code = dashboard.profile.short_referral_code
     referral_url = f"{settings.app_base_url.rstrip('/')}/?{urlencode({'ref': code})}"
     return SuccessEnvelope(
         data=AffiliateDashboardData(
@@ -295,6 +296,27 @@ async def list_affiliate_profile_referrals(
     )
 
 
+@admin_router.get(
+    "/profiles/{user_id}/status-history",
+    response_model=SuccessEnvelope[list[AffiliateProfileStatusChangeData]],
+)
+async def list_affiliate_profile_status_history(
+    request: Request,
+    response: Response,
+    user_id: UUID,
+    principal: CurrentPrincipalDependency,
+    service: AffiliateServiceDependency,
+    limit: Annotated[int, Query(ge=1, le=100)] = 50,
+) -> SuccessEnvelope[list[AffiliateProfileStatusChangeData]]:
+    _require_profile_management(principal)
+    rows = await service.list_profile_status_history(user_id=user_id, limit=limit)
+    response.headers["Cache-Control"] = "no-store"
+    return SuccessEnvelope(
+        data=[AffiliateProfileStatusChangeData.model_validate(row) for row in rows],
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
 @admin_router.post(
     "/profiles/{user_id}/suspend",
     response_model=SuccessEnvelope[AffiliateProfileAdminData],
@@ -383,6 +405,8 @@ async def create_commission_rules(
         enabled=payload.enabled,
         attribution_window_days=payload.attribution_window_days,
         hold_days=payload.hold_days,
+        level2_enabled=payload.level2_enabled,
+        level2_rate_basis_points=payload.level2_rate_basis_points,
         rates=tuple(
             (rate.service_code.upper(), rate.direct_rate_basis_points)
             for rate in payload.rates

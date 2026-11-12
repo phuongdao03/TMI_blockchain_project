@@ -4,12 +4,13 @@ from uuid import uuid4
 
 import pytest
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
 
 from app.core.errors import DomainError
 from app.modules.affiliate.models import (
+    AffiliateCommission,
     AffiliateCommissionRate,
     AffiliateCommissionRuleSet,
+    AffiliateReferralCodeAlias,
 )
 from app.modules.affiliate.service import AffiliateService
 from app.modules.auth.models import Role, User, UserRole, UserStatus
@@ -34,6 +35,8 @@ async def _seed_rule_set(
     hold_days: int = 30,
     attribution_window_days: int = 30,
     direct_rate_basis_points: int = 0,
+    level2_enabled: bool = False,
+    level2_rate_basis_points: int = 0,
 ) -> AffiliateCommissionRuleSet:
     now = datetime.now(UTC)
     rule_set = AffiliateCommissionRuleSet(
@@ -42,8 +45,8 @@ async def _seed_rule_set(
         enabled=enabled,
         attribution_window_days=attribution_window_days,
         hold_days=hold_days,
-        level2_enabled=False,
-        level2_rate_basis_points=0,
+        level2_enabled=level2_enabled,
+        level2_rate_basis_points=level2_rate_basis_points,
         effective_from=now - timedelta(seconds=1),
         published_at=now - timedelta(seconds=1),
     )
@@ -101,6 +104,8 @@ def test_referral_click_and_attribution_are_idempotent_and_first_touch_wins() ->
             async with sessions() as session:
                 service = AffiliateService(session, affiliate_enabled=True)
                 affiliate = await service.ensure_profile(principal.user_id)
+                assert 8 <= len(affiliate.short_referral_code) <= 10
+                assert affiliate.short_referral_code.startswith("THV")
                 click_id = uuid4()
                 click = await service.record_click(
                     referral_code=affiliate.referral_code,
@@ -170,7 +175,161 @@ def test_referral_click_and_attribution_are_idempotent_and_first_touch_wins() ->
     asyncio.run(exercise())
 
 
-def test_commission_rules_are_disabled_and_level_two_cannot_be_enabled() -> None:
+def test_legacy_referral_code_alias_still_attributes_the_same_profile() -> None:
+    async def exercise() -> None:
+        _, sessions, engine, principal = await _service()
+        try:
+            async with sessions() as session:
+                await _assign_role(session, principal.user_id, "USER")
+                await _seed_rule_set(session)
+                await session.commit()
+
+            legacy_code = "THVA1B2C3D4E5F6A7B8C9D0E1F2"
+            async with sessions() as session:
+                service = AffiliateService(session, affiliate_enabled=True)
+                profile = await service.ensure_profile(principal.user_id)
+                session.add(
+                    AffiliateReferralCodeAlias(
+                        code=legacy_code,
+                        affiliate_user_id=principal.user_id,
+                    )
+                )
+                await session.commit()
+
+            referred_user_id = uuid4()
+            async with sessions() as session:
+                session.add(
+                    User(
+                        id=referred_user_id,
+                        email="legacy-referral@example.vn",
+                        status=UserStatus.ACTIVE,
+                    )
+                )
+                await session.flush()
+                await _assign_role(session, referred_user_id, "USER")
+                await session.commit()
+
+            async with sessions() as session:
+                service = AffiliateService(session, affiliate_enabled=True)
+                click = await service.record_click(
+                    referral_code=legacy_code,
+                    event_id=uuid4(),
+                )
+                attribution = await service.claim_referral(
+                    referred_user_id=referred_user_id,
+                    referral_code=legacy_code,
+                    click_id=click.id,
+                )
+                assert attribution.affiliate_user_id == profile.user_id
+                assert attribution.referral_code_snapshot == legacy_code
+        finally:
+            await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_configured_two_level_commissions_are_idempotent_and_capped_at_two() -> None:
+    async def exercise() -> None:
+        _, sessions, engine, top_level_user = await _service()
+        try:
+            direct_user_id = uuid4()
+            payer_user_id = uuid4()
+            async with sessions() as session:
+                await _assign_role(session, top_level_user.user_id, "USER")
+                for user_id, email in (
+                    (direct_user_id, "direct-affiliate@example.vn"),
+                    (payer_user_id, "commission-payer@example.vn"),
+                ):
+                    session.add(
+                        User(
+                            id=user_id,
+                            email=email,
+                            status=UserStatus.ACTIVE,
+                        )
+                    )
+                    await session.flush()
+                    await _assign_role(session, user_id, "USER")
+                await _seed_rule_set(
+                    session,
+                    enabled=True,
+                    direct_rate_basis_points=500,
+                    level2_enabled=True,
+                    level2_rate_basis_points=100,
+                )
+                await session.commit()
+
+            async with sessions() as session:
+                service = AffiliateService(session, affiliate_enabled=True)
+                top_profile = await service.ensure_profile(top_level_user.user_id)
+                direct_profile = await service.ensure_profile(direct_user_id)
+                await service.claim_referral(
+                    referred_user_id=direct_user_id,
+                    referral_code=top_profile.short_referral_code,
+                )
+                await service.claim_referral(
+                    referred_user_id=payer_user_id,
+                    referral_code=direct_profile.short_referral_code,
+                )
+
+            async with sessions() as session:
+                service = AffiliateService(
+                    session,
+                    affiliate_enabled=True,
+                    direct_commission_enabled=True,
+                )
+                direct_commission = await service.record_commission(
+                    source_reference="membership:two-level-payment",
+                    referred_user_id=payer_user_id,
+                    service_code="MEMBERSHIP",
+                    amount_minor=100_000,
+                )
+                assert direct_commission is not None
+                assert direct_commission.affiliate_user_id == direct_user_id
+                assert direct_commission.commission_level == 1
+
+            async with sessions() as session:
+                commissions = list(
+                    await session.scalars(
+                        select(AffiliateCommission).order_by(
+                            AffiliateCommission.commission_level
+                        )
+                    )
+                )
+                assert [
+                    (row.commission_level, row.affiliate_user_id) for row in commissions
+                ] == [
+                    (1, direct_user_id),
+                    (2, top_level_user.user_id),
+                ]
+                assert [row.commission_amount_minor for row in commissions] == [
+                    5_000,
+                    1_000,
+                ]
+
+            async with sessions() as session:
+                replay = await AffiliateService(
+                    session,
+                    affiliate_enabled=True,
+                    direct_commission_enabled=True,
+                ).record_commission(
+                    source_reference="membership:two-level-payment",
+                    referred_user_id=payer_user_id,
+                    service_code="MEMBERSHIP",
+                    amount_minor=100_000,
+                )
+                assert replay is not None
+                assert replay.commission_level == 1
+
+            async with sessions() as session:
+                commissions = list(await session.scalars(select(AffiliateCommission)))
+                assert len(commissions) == 2
+        finally:
+            await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_commission_rules_keep_second_level_off_until_configured() -> None:
     async def exercise() -> None:
         _, sessions, engine, principal = await _service()
         try:
@@ -185,10 +344,14 @@ def test_commission_rules_are_disabled_and_level_two_cannot_be_enabled() -> None
                 assert all(
                     rate.direct_rate_basis_points == 0 for rate in rule_set.rates
                 )
-                with pytest.raises(IntegrityError):
-                    async with session.begin():
-                        rule_set.rule_set.level2_enabled = True
-                        await session.flush()
+                rule_set.rule_set.level2_enabled = True
+                rule_set.rule_set.level2_rate_basis_points = 250
+                await session.commit()
+                current = await AffiliateService(session).current_rules()
+                assert current is not None
+                assert current.rule_set.id == rule_set.rule_set.id
+                assert current.rule_set.level2_enabled is True
+                assert current.rule_set.level2_rate_basis_points == 250
         finally:
             await engine.dispose()
 

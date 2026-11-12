@@ -71,11 +71,19 @@ class AffiliateReferralSummaryData(AffiliateSchema):
 
 class AffiliateProfileAdminData(AffiliateSchema):
     user_id: UUID
+    email: str
     referral_code: str
     status: str
     created_at: datetime
     click_count: int
     attributed_user_count: int
+
+
+class AffiliateProfileStatusChangeData(AffiliateSchema):
+    status: str
+    reason: str
+    actor_user_id: UUID | None
+    created_at: datetime
 
 
 class AffiliateProfileStatusRequest(AffiliateSchema):
@@ -102,6 +110,8 @@ class CommissionRuleSetCreateRequest(AffiliateSchema):
     enabled: bool = False
     attribution_window_days: Annotated[int, Field(strict=True, ge=0, le=3650)] = 30
     hold_days: Annotated[int, Field(strict=True, ge=0, le=3650)] = 30
+    level2_enabled: bool = False
+    level2_rate_basis_points: Annotated[int, Field(strict=True, ge=0, le=10_000)] = 0
     rates: list[CommissionRateInput] = Field(default_factory=list, max_length=100)
 
 
@@ -130,6 +140,7 @@ class AffiliateCommissionData(AffiliateSchema):
     amount_minor: int
     commission_amount_minor: int
     rate_basis_points: int
+    commission_level: int
     currency: str
     status: str
     earned_at: datetime
