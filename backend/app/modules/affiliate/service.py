@@ -729,6 +729,26 @@ class AffiliateService:
             previous_status = profile.status
             if previous_status != profile_status:
                 profile.status = profile_status
+                changed_at = _utc(self._clock())
+                latest_change = await self.session.scalar(
+                    select(AuditLog)
+                    .where(
+                        AuditLog.resource_type == "affiliate_profile",
+                        AuditLog.resource_id == str(user_id),
+                        AuditLog.action.in_(
+                            (
+                                "affiliate.profile.suspended",
+                                "affiliate.profile.restored",
+                            )
+                        ),
+                    )
+                    .order_by(AuditLog.created_at.desc(), AuditLog.id.desc())
+                    .limit(1)
+                )
+                if latest_change is not None:
+                    latest_changed_at = _utc(latest_change.created_at)
+                    if changed_at <= latest_changed_at:
+                        changed_at = latest_changed_at + timedelta(microseconds=1)
                 self.session.add(
                     AuditLog(
                         actor_user_id=actor_user_id,
@@ -745,6 +765,7 @@ class AffiliateService:
                             "status": profile_status,
                             "reason": normalized_reason,
                         },
+                        created_at=changed_at,
                     )
                 )
                 await self.session.flush()

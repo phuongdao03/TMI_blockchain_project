@@ -92,6 +92,42 @@ def test_profile_creation_is_idempotent_and_excludes_staff_roles() -> None:
     asyncio.run(exercise())
 
 
+def test_profile_status_history_orders_changes_with_a_fixed_clock() -> None:
+    async def exercise() -> None:
+        _, sessions, engine, principal = await _service()
+        now = datetime(2026, 11, 12, 12, 0, tzinfo=UTC)
+        try:
+            async with sessions() as session:
+                await _assign_role(session, principal.user_id, "USER")
+                await session.commit()
+
+            async with sessions() as session:
+                service = AffiliateService(session, clock=lambda: now)
+                await service.ensure_profile(principal.user_id)
+                await service.set_profile_status(
+                    user_id=principal.user_id,
+                    actor_user_id=ADMIN_ID,
+                    profile_status="SUSPENDED",
+                    reason="Manual review found suspicious activity.",
+                )
+                await service.set_profile_status(
+                    user_id=principal.user_id,
+                    actor_user_id=ADMIN_ID,
+                    profile_status="ACTIVE",
+                    reason="Review completed; access restored.",
+                )
+
+                history = await service.list_profile_status_history(
+                    user_id=principal.user_id
+                )
+                assert [item.status for item in history] == ["ACTIVE", "SUSPENDED"]
+                assert history[0].created_at > history[1].created_at
+        finally:
+            await engine.dispose()
+
+    asyncio.run(exercise())
+
+
 def test_referral_click_and_attribution_are_idempotent_and_first_touch_wins() -> None:
     async def exercise() -> None:
         _, sessions, engine, principal = await _service()
