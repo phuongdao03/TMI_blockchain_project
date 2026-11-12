@@ -42,7 +42,7 @@ def downgrade() -> None:
     bind = op.get_bind()
     marked_rows = sum(
         int(
-            bind.scalar(sa.text(f"SELECT count(*) FROM {table} WHERE {column} = 1"))
+            bind.scalar(sa.text(f"SELECT count(*) FROM {table} WHERE {column} IS TRUE"))
             or 0
         )
         for table, column in TEST_MARKER_COLUMNS

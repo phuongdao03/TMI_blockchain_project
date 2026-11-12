@@ -1,7 +1,7 @@
 import logging
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
-from typing import Any, Literal
+from typing import Any, Literal, cast
 from uuid import UUID, uuid4, uuid5
 
 from sqlalchemy import select
@@ -1967,7 +1967,9 @@ class PaymentService:
                         "The pending dossier snapshot is unavailable."
                     )
                 snapshot = dict(version.snapshot_json)
-                submission = dict(snapshot.get("submission", {}))
+                submission = dict(
+                    cast(dict[str, object], snapshot.get("submission", {}))
+                )
                 submission["submittedAt"] = submitted_at.isoformat()
                 snapshot["submission"] = submission
                 version.snapshot_json = snapshot

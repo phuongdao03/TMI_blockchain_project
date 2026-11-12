@@ -13554,7 +13554,11 @@ html[data-theme="light"] .public-home .registry-hero__document-link {
 }
 
 .admin-module-list > a:hover {
-  background: color-mix(in srgb, var(--theme-accent) 6%, transparent);
+  background: color-mix(
+    in srgb,
+    var(--theme-accent, #9d0000) 8%,
+    var(--theme-elevated, #fff9ed)
+  );
   box-shadow: none;
   transform: none;
 }

@@ -323,7 +323,7 @@ class DossierVersion(Base):
         ForeignKey(User.id, ondelete="RESTRICT"),
         nullable=False,
     )
-    submitted_at: Mapped[datetime] = mapped_column(
+    submitted_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
         server_default=func.now(),

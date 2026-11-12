@@ -1,6 +1,6 @@
 # Dossier Submission Payment and TEST Isolation
 
-**Status:** Implemented in the local working tree. No commit, deployment, production migration, or real payment was made.
+**Status:** Implementation and CI fixes are committed to `main`. No production migration, deployment, or real payment was made.
 
 ## Behavior
 
@@ -20,12 +20,12 @@
 
 ## Verification
 
-- Backend Ruff lint and format checks pass. The focused affected backend set passes: 46 tests across auth migration/session, dossier submission API, public search, and payment service.
-- The full backend run before the final test and migration fixes reported 1,353 passed and 6 failed. Those failures were addressed, and all five directly affected test modules pass; the full suite was not rerun after the fixes.
+- Backend Ruff lint/format and mypy pass (504 source files). The focused affected backend set passes: 49 tests across auth migration/session, dossier submission, fee migration, and payment service.
+- The full backend run before the final test and migration fixes reported 1,353 passed and 6 failed. Those failures were addressed, and all six directly affected test modules pass; the full suite was not rerun after the fixes.
 - Frontend lint and typecheck, root formatting, and all 10 root tests pass. Focused changed-screen tests pass: 23 tests.
 - The full frontend run reported 1,070 passed and 4 failed. The stale waiver expectation was corrected and its focused test passes; three unrelated reviewer scorecard/verdict tests remain failing.
-- The E2E run displayed all 129 desktop cases but did not return a summary and was stopped. A focused rerun could not start because the local Next dev lock returned `EPERM`/access denied. E2E is not verified clean.
-- Backend mypy exited with an internal error in the installed mypy 2.3.0 tool.
+- The CI overflow and hover regressions are fixed. The targeted Playwright route audit and UI corrections pass: 7 tests. The full E2E suite was not rerun.
+- PostgreSQL-safe boolean checks, nullable pending version timestamps, JSON payload typing, and narrow payment-history filter columns address the reported CI failures.
 
 ## Operations
 

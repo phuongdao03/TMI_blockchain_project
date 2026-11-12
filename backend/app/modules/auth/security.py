@@ -4,6 +4,7 @@ import binascii
 import hashlib
 import json
 import os
+from collections.abc import Mapping
 from dataclasses import dataclass
 from uuid import UUID
 
@@ -74,14 +75,14 @@ class OutboxPayloadCipher:
 
     def encrypt(
         self,
-        payload: dict[str, str],
+        payload: Mapping[str, str | bool],
         *,
         event_type: str,
         aggregate_id: UUID,
     ) -> EncryptedPayload:
         nonce = os.urandom(12)
         plaintext = json.dumps(
-            payload,
+            dict(payload),
             separators=(",", ":"),
             sort_keys=True,
         ).encode()

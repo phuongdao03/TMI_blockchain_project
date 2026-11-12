@@ -3,7 +3,7 @@ import re
 from collections.abc import Callable, Mapping
 from copy import deepcopy
 from datetime import UTC, datetime
-from typing import Any, Literal
+from typing import Any, Literal, cast
 from uuid import UUID, uuid4
 
 from sqlalchemy import select
@@ -1245,7 +1245,7 @@ class DossierService:
     @staticmethod
     def _finalize_version(version: DossierVersion, submitted_at: datetime) -> None:
         snapshot = dict(version.snapshot_json)
-        submission = dict(snapshot.get("submission", {}))
+        submission = dict(cast(dict[str, object], snapshot.get("submission", {})))
         submission["submittedAt"] = DossierService._iso_utc(submitted_at)
         snapshot["submission"] = submission
         version.snapshot_json = snapshot

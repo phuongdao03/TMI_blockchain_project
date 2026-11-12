@@ -185,10 +185,10 @@ export function PaymentHistoryWorkspace() {
 
       <section className="space-y-5 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-6">
         <form
-          className="grid gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(14rem,1fr)_12rem_12rem_12rem_12rem_auto_auto]"
+          className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-4"
           onSubmit={applyFilters}
         >
-          <label className="sm:col-span-2 xl:col-span-1">
+          <label className="min-w-0 sm:col-span-2 xl:col-span-2">
             <span className="mb-1 block text-xs font-bold text-[var(--theme-muted)]">
               Tìm giao dịch
             </span>

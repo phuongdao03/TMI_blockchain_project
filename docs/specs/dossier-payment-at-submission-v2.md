@@ -1,6 +1,6 @@
 # Dossier Submission Fees and TEST Isolation
 
-**Status:** Implemented locally from the approved decisions in this session. Production migrations, payments, and deployment have not been run.
+**Status:** Implemented and committed to `main`. Production migrations, payments, and deployment have not been run.
 
 ## Implementation decisions
 
