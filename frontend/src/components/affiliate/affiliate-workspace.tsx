@@ -14,15 +14,8 @@ import type { AffiliateCommission, AffiliateReferral } from "@/lib/api/types";
 import { useAuthUser } from "@/lib/auth/user-context";
 import { formatVnd } from "@/lib/wallet/summary";
 
-const metricCards = [
-  ["clickCount", "Lượt truy cập"],
-  ["attributedUserCount", "Lượt đăng ký"],
-] as const;
-
 const commissionCards = [
-  ["pendingCommissionMinor", "Chờ duyệt"],
   ["onHoldCommissionMinor", "Đang tạm giữ"],
-  ["availableBalanceMinor", "Có thể rút"],
   ["reservedBalanceMinor", "Đang xử lý yêu cầu rút"],
   ["lifetimeEarnedMinor", "Tổng hoa hồng ghi nhận"],
   ["totalWithdrawnMinor", "Đã rút"],
@@ -99,6 +92,7 @@ function CommissionRow({ item }: { item: AffiliateCommission }) {
           {affiliateServiceLabel(item.serviceCode)}
         </p>
         <p className="text-xs text-[var(--theme-muted)]">
+          Cấp {item.commissionLevel} ·{" "}
           {new Date(item.earnedAt).toLocaleDateString("vi-VN")}
         </p>
       </div>
@@ -114,7 +108,7 @@ function CommissionRow({ item }: { item: AffiliateCommission }) {
 
 export function AffiliateWorkspace() {
   const user = useAuthUser();
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<"code" | "link" | null>(null);
   const [copyError, setCopyError] = useState(false);
   const isEligible =
     Boolean(user?.roles.includes("USER")) &&
@@ -187,71 +181,148 @@ export function AffiliateWorkspace() {
         <>
           <section
             aria-label="Mã giới thiệu của bạn"
-            className="grid gap-4 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
+            className="space-y-4 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-5"
           >
             <div className="min-w-0">
-              <p className="text-sm text-[var(--theme-muted)]">Mã giới thiệu</p>
-              <p className="mt-1 break-all font-mono text-2xl font-bold">
+              <p className="text-sm font-semibold text-[var(--theme-muted)]">
+                Mã giới thiệu của bạn
+              </p>
+              <p className="mt-1 break-all font-mono text-2xl font-bold tracking-wide">
                 {data.referralCode}
               </p>
-              <label className="mt-4 grid gap-1 text-sm font-semibold">
-                Liên kết giới thiệu
-                <input
-                  className="min-h-11 w-full rounded-lg border border-[var(--theme-border)] bg-[var(--theme-elevated)] px-3 font-mono text-sm"
-                  readOnly
-                  value={safeLink || "Liên kết chưa khả dụng"}
-                />
-              </label>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--theme-muted)]">
+                Chia sẻ mã hoặc liên kết này. Khi người được mời đăng ký và phát
+                sinh giao dịch đủ điều kiện, hoa hồng sẽ được ghi nhận theo
+                chính sách hiện hành.
+              </p>
             </div>
-            <button
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[var(--theme-border)] px-4 text-sm font-bold disabled:opacity-50"
-              disabled={!safeLink}
-              onClick={() => {
-                if (!safeLink) return;
-                if (!navigator.clipboard?.writeText) {
-                  setCopyError(true);
-                  return;
-                }
-                setCopyError(false);
-                void navigator.clipboard
-                  .writeText(safeLink)
-                  .then(() => setCopied(true))
-                  .catch(() => {
-                    setCopied(false);
+            <label className="grid gap-1 text-sm font-semibold">
+              Liên kết giới thiệu
+              <input
+                className="min-h-11 w-full min-w-0 rounded-lg border border-[var(--theme-border)] bg-[var(--theme-elevated)] px-3 font-mono text-sm"
+                readOnly
+                value={safeLink || "Liên kết chưa khả dụng"}
+              />
+            </label>
+            <div className="flex flex-wrap gap-2">
+              <button
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[var(--theme-border)] px-4 text-sm font-bold"
+                onClick={() => {
+                  if (!navigator.clipboard?.writeText) {
+                    setCopied(null);
                     setCopyError(true);
-                  });
-              }}
-              type="button"
-            >
-              {copied ? (
-                <Check aria-hidden="true" className="size-4" />
-              ) : (
-                <Copy aria-hidden="true" className="size-4" />
-              )}
-              {copied ? "Đã sao chép" : "Sao chép liên kết"}
-            </button>
+                    return;
+                  }
+                  setCopyError(false);
+                  void navigator.clipboard
+                    .writeText(data.referralCode)
+                    .then(() => setCopied("code"))
+                    .catch(() => {
+                      setCopied(null);
+                      setCopyError(true);
+                    });
+                }}
+                type="button"
+              >
+                {copied === "code" ? (
+                  <Check aria-hidden="true" className="size-4" />
+                ) : (
+                  <Copy aria-hidden="true" className="size-4" />
+                )}
+                {copied === "code" ? "Đã sao chép mã" : "Sao chép mã"}
+              </button>
+              <button
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[var(--theme-border)] px-4 text-sm font-bold disabled:opacity-50"
+                disabled={!safeLink}
+                onClick={() => {
+                  if (!safeLink || !navigator.clipboard?.writeText) {
+                    setCopied(null);
+                    setCopyError(true);
+                    return;
+                  }
+                  setCopyError(false);
+                  void navigator.clipboard
+                    .writeText(safeLink)
+                    .then(() => setCopied("link"))
+                    .catch(() => {
+                      setCopied(null);
+                      setCopyError(true);
+                    });
+                }}
+                type="button"
+              >
+                {copied === "link" ? (
+                  <Check aria-hidden="true" className="size-4" />
+                ) : (
+                  <Copy aria-hidden="true" className="size-4" />
+                )}
+                {copied === "link"
+                  ? "Đã sao chép liên kết"
+                  : "Sao chép liên kết"}
+              </button>
+              <button
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[var(--theme-border)] px-4 text-sm font-bold disabled:opacity-50"
+                disabled={!safeLink}
+                onClick={() => {
+                  if (!safeLink) return;
+                  if (!navigator.share) {
+                    setCopyError(true);
+                    return;
+                  }
+                  setCopyError(false);
+                  void navigator
+                    .share({
+                      title: "Mời bạn tham gia Tinh Hoa Việt",
+                      text: "Đăng ký qua liên kết giới thiệu của tôi.",
+                      url: safeLink,
+                    })
+                    .catch((error: unknown) => {
+                      if (
+                        error instanceof DOMException &&
+                        error.name === "AbortError"
+                      ) {
+                        return;
+                      }
+                      setCopyError(true);
+                    });
+                }}
+                type="button"
+              >
+                Chia sẻ
+              </button>
+            </div>
             {copyError ? (
-              <p role="alert" className="text-sm text-red-700 sm:col-span-2">
-                Không sao chép được liên kết. Hãy chọn và sao chép nội dung
+              <p role="alert" className="text-sm text-red-700">
+                Không thực hiện được thao tác. Hãy chọn và sao chép nội dung
                 trong ô liên kết.
               </p>
             ) : null}
           </section>
 
           <section
-            aria-label="Thống kê giới thiệu"
+            aria-label="Tổng quan giới thiệu và hoa hồng"
             className="grid gap-3 sm:grid-cols-3"
           >
-            {metricCards.map(([key, label]) => (
-              <MetricCard key={key} label={label} value={data[key]} />
-            ))}
+            <MetricCard
+              label="Người đăng ký qua bạn"
+              value={data.attributedUserCount}
+            />
+            <MetricCard
+              label="Hoa hồng có thể rút"
+              value={formatVnd(data.availableBalanceMinor)}
+            />
+            <MetricCard
+              label="Hoa hồng chờ xác nhận"
+              value={formatVnd(data.pendingCommissionMinor)}
+            />
           </section>
 
-          <section aria-labelledby="commission-summary-title">
-            <h2 id="commission-summary-title" className="text-xl font-bold">
-              Hoa hồng
-            </h2>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <details className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4">
+            <summary className="min-h-10 cursor-pointer py-2 text-sm font-bold">
+              Xem thêm số liệu giới thiệu và hoa hồng
+            </summary>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <MetricCard label="Lượt truy cập" value={data.clickCount} />
               {commissionCards.map(([key, label]) => (
                 <MetricCard
                   key={key}
@@ -260,9 +331,17 @@ export function AffiliateWorkspace() {
                 />
               ))}
             </div>
+          </details>
+
+          <section aria-labelledby="commission-summary-title">
+            <h2 id="commission-summary-title" className="text-xl font-bold">
+              Cách tính hoa hồng
+            </h2>
             <p className="mt-3 text-sm text-[var(--theme-muted)]">
-              Chỉ hoa hồng đã được duyệt mới tính vào số dư có thể rút. Yêu cầu
-              rút cần quản trị viên phê duyệt.
+              Hoa hồng được tính từ giao dịch đủ điều kiện theo chính sách hiện
+              hành, tối đa hai cấp. Khoản tiền cần được duyệt và qua thời gian
+              tạm giữ trước khi có thể yêu cầu rút; yêu cầu rút do quản trị viên
+              xử lý.
             </p>
           </section>
         </>

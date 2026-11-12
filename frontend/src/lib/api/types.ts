@@ -848,6 +848,7 @@ export interface DossierEvidence {
   issuedAt: string | null;
   displayOrder: number;
   isPublic: boolean;
+  filename?: string;
   mimeType: string;
   bytes: number;
   sha256: string;

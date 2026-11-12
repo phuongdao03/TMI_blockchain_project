@@ -485,10 +485,13 @@ describe("admin affiliate API client", () => {
       enabled: false,
       attributionWindowDays: 30,
       holdDays: 30,
+      level2Enabled: false,
+      level2RateBasisPoints: 0,
       rates: [{ serviceCode: "MEMBERSHIP", directRateBasisPoints: 500 }],
     });
     await adminAffiliateApi.publishCommissionRules("rule-1");
     await adminAffiliateApi.profileReferrals("user/1");
+    await adminAffiliateApi.profileStatusHistory("user/1");
 
     expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
       "/api/v1/admin/affiliate/profiles?limit=50&offset=50&search=THV-ABC123&status=SUSPENDED",
@@ -502,6 +505,7 @@ describe("admin affiliate API client", () => {
       "/api/v1/admin/affiliate/commission-rules",
       "/api/v1/admin/affiliate/commission-rules/rule-1/publish",
       "/api/v1/admin/affiliate/profiles/user%2F1/referrals?limit=50&offset=0",
+      "/api/v1/admin/affiliate/profiles/user%2F1/status-history?limit=50",
     ]);
     expect(fetchMock.mock.calls[1]?.[1]?.body).toBe(
       JSON.stringify({ reason: "Confirmed policy abuse" }),
@@ -514,6 +518,8 @@ describe("admin affiliate API client", () => {
         enabled: false,
         attributionWindowDays: 30,
         holdDays: 30,
+        level2Enabled: false,
+        level2RateBasisPoints: 0,
         rates: [{ serviceCode: "MEMBERSHIP", directRateBasisPoints: 500 }],
       }),
     );

@@ -26,6 +26,7 @@ export interface AffiliateReferral {
 export interface AffiliateCommission {
   id: string;
   serviceCode: string;
+  commissionLevel: 1 | 2;
   commissionAmountMinor: number;
   status: string;
   earnedAt: string;
@@ -33,11 +34,19 @@ export interface AffiliateCommission {
 
 export interface AdminAffiliateProfile {
   userId: string;
+  email: string;
   referralCode: string;
   status: "ACTIVE" | "SUSPENDED";
   createdAt: string;
   clickCount: number;
   attributedUserCount: number;
+}
+
+export interface AffiliateProfileStatusChange {
+  status: "ACTIVE" | "SUSPENDED";
+  reason: string;
+  actorUserId: string | null;
+  createdAt: string;
 }
 
 export interface AdminAffiliateCommission {
@@ -50,6 +59,7 @@ export interface AdminAffiliateCommission {
   amountMinor: number;
   commissionAmountMinor: number;
   rateBasisPoints: number;
+  commissionLevel: 1 | 2;
   currency: string;
   status:
     | "PENDING"
@@ -92,5 +102,7 @@ export interface AffiliateCommissionRuleSetInput {
   enabled: boolean;
   attributionWindowDays: number;
   holdDays: number;
+  level2Enabled: boolean;
+  level2RateBasisPoints: number;
   rates: AffiliateCommissionRate[];
 }

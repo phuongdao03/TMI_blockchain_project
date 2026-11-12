@@ -1087,6 +1087,12 @@ export const adminAffiliateApi = {
       { cache: "no-store" },
     );
   },
+  profileStatusHistory(userId: string) {
+    return request<import("./types").AffiliateProfileStatusChange[]>(
+      `/admin/affiliate/profiles/${encodeURIComponent(userId)}/status-history?limit=50`,
+      { cache: "no-store" },
+    );
+  },
   suspend(userId: string, reason: string) {
     return request<import("./types").AdminAffiliateProfile>(
       `/admin/affiliate/profiles/${encodeURIComponent(userId)}/suspend`,

@@ -8,6 +8,7 @@ const { adminAffiliateApi } = vi.hoisted(() => ({
   adminAffiliateApi: {
     profiles: vi.fn(),
     profileReferrals: vi.fn(),
+    profileStatusHistory: vi.fn(),
     suspend: vi.fn(),
     restore: vi.fn(),
     commissions: vi.fn(),
@@ -51,6 +52,7 @@ describe("AdminAffiliateWorkspace", () => {
     adminAffiliateApi.profiles.mockResolvedValue([
       {
         userId: "affiliate-user-1",
+        email: "affiliate@example.vn",
         referralCode: "THV-ABC123",
         status: "ACTIVE",
         createdAt: "2026-11-01T00:00:00Z",
@@ -70,11 +72,20 @@ describe("AdminAffiliateWorkspace", () => {
         commissionAmountMinor: 4_000,
       },
     ]);
+    adminAffiliateApi.profileStatusHistory.mockResolvedValue([
+      {
+        status: "SUSPENDED",
+        reason: "Confirmed policy abuse",
+        actorUserId: "admin-user-1",
+        createdAt: "2026-11-03T10:00:00Z",
+      },
+    ]);
     adminAffiliateApi.commissions.mockResolvedValue([
       {
         id: "commission-1",
         affiliateUserId: "affiliate-user-1",
         referredUserId: "referred-user-1",
+        commissionLevel: 1,
         ruleSetVersion: 1,
         serviceCode: "MEMBERSHIP",
         sourceReference: "membership-order-1",
@@ -127,7 +138,10 @@ describe("AdminAffiliateWorkspace", () => {
   it("suspends an affiliate only after a reason is supplied", async () => {
     renderWorkspace();
 
-    expect(await screen.findByText("THV-ABC123")).toBeTruthy();
+    expect(await screen.findByText("affiliate@example.vn")).toBeTruthy();
+    expect(
+      screen.getByRole("table", { name: "Danh sách hồ sơ giới thiệu" }),
+    ).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Tạm ngưng hồ sơ" }));
     fireEvent.change(screen.getByLabelText(/Lý do thay đổi trạng thái/), {
       target: { value: "Confirmed policy abuse" },
@@ -145,7 +159,7 @@ describe("AdminAffiliateWorkspace", () => {
   it("loads privacy-safe referral history when a profile is expanded", async () => {
     renderWorkspace();
 
-    expect(await screen.findByText("THV-ABC123")).toBeTruthy();
+    expect(await screen.findByText("affiliate@example.vn")).toBeTruthy();
     fireEvent.click(
       screen.getByRole("button", { name: "Xem lịch sử giới thiệu" }),
     );
@@ -158,6 +172,9 @@ describe("AdminAffiliateWorkspace", () => {
     expect(await screen.findByText("Lượt giới thiệu")).toBeTruthy();
     expect(screen.getByText("40.000 ₫")).toBeTruthy();
     expect(screen.queryByText("referred-user-1")).toBeNull();
+    expect(screen.getByText("Lịch sử hoa hồng")).toBeTruthy();
+    expect(await screen.findByText("Nhật ký thay đổi trạng thái")).toBeTruthy();
+    expect(screen.getByText("Confirmed policy abuse")).toBeTruthy();
   });
 
   it("reviews pending commissions and manages draft rule sets", async () => {
@@ -184,6 +201,8 @@ describe("AdminAffiliateWorkspace", () => {
         enabled: false,
         attributionWindowDays: 30,
         holdDays: 30,
+        level2Enabled: false,
+        level2RateBasisPoints: 0,
         rates: [{ serviceCode: "ADVERTISING", directRateBasisPoints: 300 }],
       });
     });
@@ -194,6 +213,34 @@ describe("AdminAffiliateWorkspace", () => {
     await waitFor(() => {
       expect(adminAffiliateApi.publishCommissionRules.mock.calls[0]?.[0]).toBe(
         "rule-1",
+      );
+    });
+  });
+
+  it("adds a second-level rate only when the Admin configures it", async () => {
+    renderWorkspace();
+    fireEvent.change(screen.getByLabelText("Dịch vụ"), {
+      target: { value: "MEMBERSHIP" },
+    });
+    fireEvent.change(screen.getByLabelText("Tỷ lệ hoa hồng (%)"), {
+      target: { value: "5" },
+    });
+    fireEvent.click(
+      screen.getByLabelText("Bật tính hoa hồng cho người giới thiệu cấp trên"),
+    );
+    fireEvent.change(screen.getByLabelText("Tỷ lệ hoa hồng cấp 2 (%)"), {
+      target: { value: "1.25" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Tạo bản nháp" }));
+
+    await waitFor(() => {
+      expect(
+        adminAffiliateApi.createCommissionRules.mock.calls[0]?.[0],
+      ).toEqual(
+        expect.objectContaining({
+          level2Enabled: true,
+          level2RateBasisPoints: 125,
+        }),
       );
     });
   });

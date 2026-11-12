@@ -5,8 +5,17 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { adminAffiliateApi } from "@/lib/api/client";
-import type { AdminAffiliateProfile, AffiliateReferral } from "@/lib/api/types";
-import { profileStatusLabel } from "@/lib/affiliate-presentation";
+import type {
+  AdminAffiliateCommission,
+  AdminAffiliateProfile,
+  AffiliateProfileStatusChange,
+  AffiliateReferral,
+} from "@/lib/api/types";
+import {
+  affiliateServiceLabel,
+  commissionStatusLabel,
+  profileStatusLabel,
+} from "@/lib/affiliate-presentation";
 import { formatVnd } from "@/lib/wallet/summary";
 
 const inputClass =
@@ -46,6 +55,45 @@ function ProfileReferralRow({ item }: { item: AffiliateReferral }) {
   );
 }
 
+function ProfileCommissionRow({ item }: { item: AdminAffiliateCommission }) {
+  return (
+    <li className="grid gap-2 border-b border-[var(--theme-border)] py-3 last:border-b-0 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+      <div className="min-w-0">
+        <p className="font-semibold">
+          {affiliateServiceLabel(item.serviceCode)} · Cấp {item.commissionLevel}
+        </p>
+        <p className="text-xs text-[var(--theme-muted)]">
+          {new Date(item.earnedAt).toLocaleString("vi-VN")}
+        </p>
+      </div>
+      <div className="text-sm sm:text-right">
+        <p className="font-bold">{formatVnd(item.commissionAmountMinor)}</p>
+        <p className="text-xs text-[var(--theme-muted)]">
+          {commissionStatusLabel(item.status)}
+        </p>
+      </div>
+    </li>
+  );
+}
+
+function ProfileStatusChangeRow({
+  item,
+}: {
+  item: AffiliateProfileStatusChange;
+}) {
+  return (
+    <li className="border-b border-[var(--theme-border)] py-3 last:border-b-0">
+      <p className="font-semibold">
+        {item.status === "SUSPENDED" ? "Đã tạm ngưng" : "Đã khôi phục"}
+      </p>
+      <p className="mt-1 text-xs text-[var(--theme-muted)]">
+        {new Date(item.createdAt).toLocaleString("vi-VN")}
+      </p>
+      <p className="mt-1 break-words text-sm">{item.reason}</p>
+    </li>
+  );
+}
+
 export function AdminAffiliateProfiles() {
   const client = useQueryClient();
   const [searchDraft, setSearchDraft] = useState("");
@@ -71,6 +119,17 @@ export function AdminAffiliateProfiles() {
   const referralHistory = useQuery({
     queryKey: ["admin", "affiliate", "profile-referrals", expandedUserId],
     queryFn: () => adminAffiliateApi.profileReferrals(expandedUserId!),
+    enabled: Boolean(expandedUserId),
+  });
+  const profileCommissions = useQuery({
+    queryKey: ["admin", "affiliate", "profile-commissions", expandedUserId],
+    queryFn: () =>
+      adminAffiliateApi.commissions({ affiliateUserId: expandedUserId! }),
+    enabled: Boolean(expandedUserId),
+  });
+  const statusHistory = useQuery({
+    queryKey: ["admin", "affiliate", "profile-status-history", expandedUserId],
+    queryFn: () => adminAffiliateApi.profileStatusHistory(expandedUserId!),
     enabled: Boolean(expandedUserId),
   });
   const setProfileStatus = useMutation({
@@ -117,11 +176,11 @@ export function AdminAffiliateProfiles() {
           id="affiliate-profiles-title"
           className="text-lg font-bold sm:text-xl"
         >
-          Hồ sơ tiếp thị liên kết
+          Quản lý giới thiệu
         </h2>
         <p className="mt-1 text-sm text-[var(--theme-muted)]">
-          Tra cứu bằng mã người dùng hoặc mã giới thiệu. Mọi thay đổi trạng thái
-          cần có lý do lưu trong lịch sử.
+          Tra cứu bằng email, mã người dùng hoặc mã giới thiệu. Mọi thay đổi
+          trạng thái cần có lý do lưu trong lịch sử.
         </p>
       </div>
       <form
@@ -136,7 +195,7 @@ export function AdminAffiliateProfiles() {
           className="grid gap-1 text-sm font-semibold"
           htmlFor="affiliate-profile-search"
         >
-          Mã người dùng hoặc mã giới thiệu
+          Email, mã người dùng hoặc mã giới thiệu
           <input
             id="affiliate-profile-search"
             className={inputClass}
@@ -194,120 +253,220 @@ export function AdminAffiliateProfiles() {
         </div>
       ) : null}
       {profiles.data?.length ? (
-        <div className="divide-y divide-[var(--theme-border)] rounded-xl border border-[var(--theme-border)]">
-          {profiles.data.map((profile) => (
-            <article
-              className="grid gap-3 p-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
-              key={profile.userId}
+        <div
+          aria-label="Danh sách hồ sơ giới thiệu"
+          className="overflow-hidden rounded-xl border border-[var(--theme-border)]"
+          role="table"
+        >
+          <div role="rowgroup">
+            <div
+              className="hidden bg-[var(--theme-elevated)] px-4 py-3 text-left text-xs font-bold uppercase tracking-wide lg:grid lg:grid-cols-[minmax(14rem,1.4fr)_minmax(15rem,1fr)_minmax(20rem,1.5fr)] lg:gap-4"
+              role="row"
             >
-              <div className="min-w-0">
-                <p className="break-all font-mono text-sm">{profile.userId}</p>
-                <p className="mt-1 font-semibold">{profile.referralCode}</p>
-                <p className="mt-1 text-xs text-[var(--theme-muted)]">
-                  {profile.clickCount} lượt nhấp · {profile.attributedUserCount}{" "}
-                  người được giới thiệu · tạo ngày{" "}
-                  {new Date(profile.createdAt).toLocaleDateString("vi-VN")}
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full border border-[var(--theme-border)] bg-[var(--theme-elevated)] px-3 py-1 text-xs font-bold">
-                  {profileStatusLabel(profile.status)}
-                </span>
-                <Button
-                  className="min-h-10"
-                  onClick={() =>
-                    setExpandedUserId((current) =>
-                      current === profile.userId ? null : profile.userId,
-                    )
-                  }
-                  type="button"
-                  variant="outline"
-                  aria-expanded={expandedUserId === profile.userId}
+              <span role="columnheader">Tài khoản</span>
+              <span role="columnheader">Hiệu quả giới thiệu</span>
+              <span role="columnheader">Trạng thái và thao tác</span>
+            </div>
+          </div>
+          <div
+            className="divide-y divide-[var(--theme-border)]"
+            role="rowgroup"
+          >
+            {profiles.data.map((profile) => (
+              <article
+                className="grid gap-3 p-4 lg:grid-cols-[minmax(14rem,1.4fr)_minmax(15rem,1fr)_minmax(20rem,1.5fr)] lg:items-center lg:gap-4"
+                key={profile.userId}
+                role="row"
+              >
+                <div className="min-w-0" role="cell">
+                  <p className="break-words font-semibold">{profile.email}</p>
+                  <p className="mt-1 font-mono text-sm">
+                    {profile.referralCode}
+                  </p>
+                  <p className="mt-1 break-all font-mono text-xs text-[var(--theme-muted)]">
+                    Mã người dùng: {profile.userId}
+                  </p>
+                </div>
+                <div className="min-w-0 text-sm" role="cell">
+                  <span className="font-semibold lg:hidden">Hiệu quả: </span>
+                  <p className="mt-1 text-xs text-[var(--theme-muted)]">
+                    {profile.clickCount} lượt nhấp ·{" "}
+                    {profile.attributedUserCount} người được giới thiệu · tạo
+                    ngày{" "}
+                    {new Date(profile.createdAt).toLocaleDateString("vi-VN")}
+                  </p>
+                </div>
+                <div
+                  className="flex flex-wrap items-center gap-2 lg:justify-end"
+                  role="cell"
                 >
-                  {expandedUserId === profile.userId
-                    ? "Ẩn lịch sử"
-                    : "Xem lịch sử giới thiệu"}
-                </Button>
-                <Button
-                  className="min-h-10"
-                  onClick={() => {
-                    setAction({
-                      userId: profile.userId,
-                      kind: profile.status === "ACTIVE" ? "suspend" : "restore",
-                    });
-                    setReason("");
-                    setError(false);
-                  }}
-                  type="button"
-                  variant="outline"
-                >
-                  {profile.status === "ACTIVE"
-                    ? "Tạm ngưng hồ sơ"
-                    : "Khôi phục hồ sơ"}
-                </Button>
-              </div>
-              {expandedUserId === profile.userId ? (
-                <section
-                  aria-label={`Lịch sử giới thiệu của mã ${profile.referralCode}`}
-                  className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-elevated)] p-4 lg:col-span-2"
-                >
-                  {referralHistory.isPending ? (
-                    <p aria-busy="true" className="text-sm" role="status">
-                      Đang tải lịch sử giới thiệu…
-                    </p>
-                  ) : referralHistory.isError ? (
-                    <p role="alert" className="text-sm text-red-700">
-                      Chưa tải được lịch sử giới thiệu.
-                    </p>
-                  ) : referralHistory.data?.length ? (
-                    <ul className="divide-y divide-[var(--theme-border)]">
-                      {referralHistory.data.map((item) => (
-                        <ProfileReferralRow item={item} key={item.id} />
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-sm text-[var(--theme-muted)]">
-                      Hồ sơ này chưa có lượt giới thiệu được ghi nhận.
-                    </p>
-                  )}
-                </section>
-              ) : null}
-              {action?.userId === profile.userId ? (
-                <form
-                  className="grid gap-2 border-t border-[var(--theme-border)] pt-3 lg:col-span-2 sm:grid-cols-[minmax(0,1fr)_auto]"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    submitStatus(profile);
-                  }}
-                >
-                  <label className="grid gap-1 text-sm font-semibold">
-                    Lý do thay đổi trạng thái (ít nhất 10 ký tự)
-                    <input
-                      className={inputClass}
-                      minLength={10}
-                      maxLength={500}
-                      onChange={(event) => setReason(event.target.value)}
-                      required
-                      value={reason}
-                    />
-                  </label>
+                  <span className="text-xs font-semibold lg:hidden">
+                    Trạng thái hồ sơ:
+                  </span>
+                  <span className="rounded-full border border-[var(--theme-border)] bg-[var(--theme-elevated)] px-3 py-1 text-xs font-bold">
+                    {profileStatusLabel(profile.status)}
+                  </span>
                   <Button
-                    className="min-h-11 self-end"
-                    disabled={
-                      reason.trim().length < 10 || setProfileStatus.isPending
+                    className="min-h-10"
+                    onClick={() =>
+                      setExpandedUserId((current) =>
+                        current === profile.userId ? null : profile.userId,
+                      )
                     }
-                    type="submit"
+                    type="button"
+                    variant="outline"
+                    aria-expanded={expandedUserId === profile.userId}
                   >
-                    {setProfileStatus.isPending
-                      ? "Đang lưu…"
-                      : action.kind === "suspend"
-                        ? "Xác nhận tạm ngưng"
-                        : "Xác nhận khôi phục"}
+                    {expandedUserId === profile.userId
+                      ? "Ẩn lịch sử"
+                      : "Xem lịch sử giới thiệu"}
                   </Button>
-                </form>
-              ) : null}
-            </article>
-          ))}
+                  <Button
+                    className="min-h-10"
+                    onClick={() => {
+                      setAction({
+                        userId: profile.userId,
+                        kind:
+                          profile.status === "ACTIVE" ? "suspend" : "restore",
+                      });
+                      setReason("");
+                      setError(false);
+                    }}
+                    type="button"
+                    variant="outline"
+                  >
+                    {profile.status === "ACTIVE"
+                      ? "Tạm ngưng hồ sơ"
+                      : "Khôi phục hồ sơ"}
+                  </Button>
+                </div>
+                {expandedUserId === profile.userId ? (
+                  <section
+                    aria-label={`Chi tiết giới thiệu của ${profile.email}`}
+                    className="col-span-full grid gap-5 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-elevated)] p-4 lg:grid-cols-2"
+                    role="cell"
+                  >
+                    <div>
+                      <h3 className="font-bold">Lượt giới thiệu</h3>
+                      {referralHistory.isPending ? (
+                        <p
+                          aria-busy="true"
+                          className="py-2 text-sm"
+                          role="status"
+                        >
+                          Đang tải lượt giới thiệu…
+                        </p>
+                      ) : referralHistory.isError ? (
+                        <p role="alert" className="py-2 text-sm text-red-700">
+                          Chưa tải được lượt giới thiệu.
+                        </p>
+                      ) : referralHistory.data?.length ? (
+                        <ul className="divide-y divide-[var(--theme-border)]">
+                          {referralHistory.data.map((item) => (
+                            <ProfileReferralRow item={item} key={item.id} />
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="py-2 text-sm text-[var(--theme-muted)]">
+                          Chưa có lượt giới thiệu được ghi nhận.
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <h3 className="font-bold">Lịch sử hoa hồng</h3>
+                      {profileCommissions.isPending ? (
+                        <p
+                          aria-busy="true"
+                          className="py-2 text-sm"
+                          role="status"
+                        >
+                          Đang tải lịch sử hoa hồng…
+                        </p>
+                      ) : profileCommissions.isError ? (
+                        <p role="alert" className="py-2 text-sm text-red-700">
+                          Chưa tải được lịch sử hoa hồng.
+                        </p>
+                      ) : profileCommissions.data?.length ? (
+                        <ul className="divide-y divide-[var(--theme-border)]">
+                          {profileCommissions.data.map((item) => (
+                            <ProfileCommissionRow item={item} key={item.id} />
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="py-2 text-sm text-[var(--theme-muted)]">
+                          Chưa có hoa hồng được ghi nhận.
+                        </p>
+                      )}
+                    </div>
+                    <div className="lg:col-span-2">
+                      <h3 className="font-bold">Nhật ký thay đổi trạng thái</h3>
+                      {statusHistory.isPending ? (
+                        <p
+                          aria-busy="true"
+                          className="py-2 text-sm"
+                          role="status"
+                        >
+                          Đang tải nhật ký…
+                        </p>
+                      ) : statusHistory.isError ? (
+                        <p role="alert" className="py-2 text-sm text-red-700">
+                          Chưa tải được nhật ký trạng thái.
+                        </p>
+                      ) : statusHistory.data?.length ? (
+                        <ul className="divide-y divide-[var(--theme-border)]">
+                          {statusHistory.data.map((item) => (
+                            <ProfileStatusChangeRow
+                              item={item}
+                              key={`${item.createdAt}-${item.status}`}
+                            />
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="py-2 text-sm text-[var(--theme-muted)]">
+                          Chưa có thay đổi trạng thái.
+                        </p>
+                      )}
+                    </div>
+                  </section>
+                ) : null}
+                {action?.userId === profile.userId ? (
+                  <form
+                    className="col-span-full grid gap-2 border-t border-[var(--theme-border)] pt-3 sm:grid-cols-[minmax(0,1fr)_auto]"
+                    role="cell"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      submitStatus(profile);
+                    }}
+                  >
+                    <label className="grid gap-1 text-sm font-semibold">
+                      Lý do thay đổi trạng thái (ít nhất 10 ký tự)
+                      <input
+                        className={inputClass}
+                        minLength={10}
+                        maxLength={500}
+                        onChange={(event) => setReason(event.target.value)}
+                        required
+                        value={reason}
+                      />
+                    </label>
+                    <Button
+                      className="min-h-11 self-end"
+                      disabled={
+                        reason.trim().length < 10 || setProfileStatus.isPending
+                      }
+                      type="submit"
+                    >
+                      {setProfileStatus.isPending
+                        ? "Đang lưu…"
+                        : action.kind === "suspend"
+                          ? "Xác nhận tạm ngưng"
+                          : "Xác nhận khôi phục"}
+                    </Button>
+                  </form>
+                ) : null}
+              </article>
+            ))}
+          </div>
         </div>
       ) : profiles.data && !profiles.data.length ? (
         <p className="rounded-xl border border-dashed border-[var(--theme-border)] p-5 text-sm text-[var(--theme-muted)]">

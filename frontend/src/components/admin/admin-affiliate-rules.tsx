@@ -35,6 +35,8 @@ export function AdminAffiliateRules() {
   const [enabled, setEnabled] = useState(false);
   const [attributionWindowDays, setAttributionWindowDays] = useState("30");
   const [holdDays, setHoldDays] = useState("30");
+  const [level2Enabled, setLevel2Enabled] = useState(false);
+  const [level2Percent, setLevel2Percent] = useState("");
   const [rates, setRates] = useState<RateDraft[]>([
     { id: 0, serviceCode: "", percent: "" },
   ]);
@@ -50,6 +52,8 @@ export function AdminAffiliateRules() {
     onSuccess: async () => {
       setError("");
       setMessage("Đã tạo bản nháp quy tắc hoa hồng.");
+      setLevel2Enabled(false);
+      setLevel2Percent("");
       setRates([{ id: nextRateId.current++, serviceCode: "", percent: "" }]);
       await client.invalidateQueries({
         queryKey: ["admin", "affiliate", "rules"],
@@ -90,6 +94,7 @@ export function AdminAffiliateRules() {
       new Set(selectedCodes).size === selectedCodes.length;
     const attributionDays = Number(attributionWindowDays);
     const holdDaysValue = Number(holdDays);
+    const level2Rate = level2Enabled ? percentToBasisPoints(level2Percent) : 0;
     if (
       !validRates ||
       !Number.isInteger(attributionDays) ||
@@ -97,7 +102,8 @@ export function AdminAffiliateRules() {
       attributionDays > 3650 ||
       !Number.isInteger(holdDaysValue) ||
       holdDaysValue < 0 ||
-      holdDaysValue > 3650
+      holdDaysValue > 3650 ||
+      (level2Enabled && (!level2Rate || level2Rate < 1))
     ) {
       setMessage("");
       setError(
@@ -115,6 +121,8 @@ export function AdminAffiliateRules() {
       enabled,
       attributionWindowDays: attributionDays,
       holdDays: holdDaysValue,
+      level2Enabled,
+      level2RateBasisPoints: level2Rate ?? 0,
       rates: commissionRates,
     });
   };
@@ -265,6 +273,38 @@ export function AdminAffiliateRules() {
             </Button>
           ) : null}
         </fieldset>
+        <fieldset className="space-y-3 rounded-lg border border-[var(--theme-border)] p-4">
+          <legend className="px-1 font-semibold">Hoa hồng cấp 2</legend>
+          <p className="text-sm text-[var(--theme-muted)]">
+            Chỉ bật khi đã có tỷ lệ được phê duyệt. Chính sách hiện tại vẫn giữ
+            nguyên nếu mục này chưa được cấu hình.
+          </p>
+          <label className="flex min-h-11 items-center gap-2 text-sm font-semibold">
+            <input
+              checked={level2Enabled}
+              onChange={(event) => setLevel2Enabled(event.target.checked)}
+              type="checkbox"
+            />
+            Bật tính hoa hồng cho người giới thiệu cấp trên
+          </label>
+          {level2Enabled ? (
+            <label className="grid max-w-xs gap-1 text-sm font-semibold">
+              Tỷ lệ hoa hồng cấp 2 (%)
+              <input
+                className={inputClass}
+                inputMode="decimal"
+                max="100"
+                min="0.01"
+                onChange={(event) => setLevel2Percent(event.target.value)}
+                placeholder="Nhập tỷ lệ đã được phê duyệt"
+                required
+                step="0.01"
+                type="number"
+                value={level2Percent}
+              />
+            </label>
+          ) : null}
+        </fieldset>
         <label className="flex min-h-11 items-center gap-2 text-sm font-semibold">
           <input
             checked={enabled}
@@ -335,6 +375,10 @@ export function AdminAffiliateRules() {
                         `${affiliateServiceLabel(rate.serviceCode)}: ${basisPointsAsPercent(rate.directRateBasisPoints)}`,
                     )
                     .join(" · ")}
+                  {" · "}
+                  {rule.level2Enabled
+                    ? `Cấp 2: ${basisPointsAsPercent(rule.level2RateBasisPoints)}`
+                    : "Cấp 2: chưa bật"}
                 </p>
               </div>
               {rule.status === "DRAFT" ? (

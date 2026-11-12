@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AffiliateWorkspace } from "./affiliate-workspace";
@@ -31,8 +31,8 @@ describe("AffiliateWorkspace", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     affiliateApi.me.mockResolvedValue({
-      referralCode: "THV-ABC123",
-      referralUrl: "https://example.test/r/THV-ABC123",
+      referralCode: "THV8K2M4",
+      referralUrl: "https://example.test/r/THV8K2M4",
       status: "ACTIVE",
       clickCount: 12,
       attributedUserCount: 4,
@@ -59,6 +59,7 @@ describe("AffiliateWorkspace", () => {
       {
         id: "commission-1",
         serviceCode: "MEMBERSHIP",
+        commissionLevel: 1,
         commissionAmountMinor: 25_000,
         status: "AVAILABLE",
         earnedAt: "2026-11-02T00:00:00Z",
@@ -69,15 +70,56 @@ describe("AffiliateWorkspace", () => {
   it("shows referral metrics and commission history", async () => {
     renderWorkspace();
 
-    expect(await screen.findByText("THV-ABC123")).toBeTruthy();
+    expect(await screen.findByText("THV8K2M4")).toBeTruthy();
     expect(screen.getByText("12")).toBeTruthy();
     expect(screen.getByText("4")).toBeTruthy();
-    expect(await screen.findByText(/49\.000/)).toBeTruthy();
     expect(await screen.findByText("Gói thành viên")).toBeTruthy();
+    expect(screen.getByText(/Cấp 1/)).toBeTruthy();
     expect(await screen.findByText("Người được giới thiệu")).toBeTruthy();
     expect(screen.getByText("50.000 ₫")).toBeTruthy();
     expect(
-      screen.getByDisplayValue("https://example.test/?ref=THV-ABC123"),
+      screen.getByDisplayValue("https://example.test/?ref=THV8K2M4"),
     ).toBeTruthy();
+    const details = screen
+      .getByText("Xem thêm số liệu giới thiệu và hoa hồng")
+      .closest("details");
+    expect(details?.open).toBe(false);
+    fireEvent.click(
+      screen.getByText("Xem thêm số liệu giới thiệu và hoa hồng"),
+    );
+    expect(await screen.findByText("49.000 ₫")).toBeTruthy();
+  });
+
+  it("copies the short referral code", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    });
+    renderWorkspace();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Sao chép mã" }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith("THV8K2M4"));
+    expect(
+      await screen.findByRole("button", { name: "Đã sao chép mã" }),
+    ).toBeTruthy();
+  });
+
+  it("shares the referral link through the device share sheet", async () => {
+    const share = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "share", {
+      configurable: true,
+      value: share,
+    });
+    renderWorkspace();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Chia sẻ" }));
+    await waitFor(() =>
+      expect(share).toHaveBeenCalledWith({
+        title: "Mời bạn tham gia Tinh Hoa Việt",
+        text: "Đăng ký qua liên kết giới thiệu của tôi.",
+        url: "https://example.test/?ref=THV8K2M4",
+      }),
+    );
   });
 });
