@@ -204,6 +204,45 @@ async def _service(
     )
 
 
+def test_admin_fee_decisions_are_limited_to_legacy_dossiers() -> None:
+    async def exercise() -> None:
+        service, sessions, engine, _ = await _service()
+        async with sessions() as session:
+            dossier = await session.get(Dossier, DOSSIER_ID)
+            assert dossier is not None
+            dossier.submission_fee_policy_mode = "DYNAMIC"
+            await session.commit()
+
+        admin = AuthPrincipal(
+            user_id=ADMIN_ID,
+            session_id=uuid4(),
+            email="admin@cnsgroup.vn",
+            roles=("SUPER_ADMIN",),
+        )
+        assert await service.list_payment_candidates(admin) == ()
+        with pytest.raises(PaymentConflictError, match="legacy"):
+            await service.issue_order(
+                admin,
+                DOSSIER_ID,
+                idempotency_key="dynamic-admin-fee",
+                amount_minor=2_000_000,
+                currency="VND",
+                description="Late submission fee",
+                due_at=None,
+            )
+        with pytest.raises(PaymentConflictError, match="legacy"):
+            await service.waive_payment(
+                admin,
+                DOSSIER_ID,
+                idempotency_key="dynamic-admin-waiver",
+                reason="No late fee decision for new dossiers",
+            )
+        await service.close()
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
 def _webhook(
     *,
     amount_minor: int = 1_000_000,

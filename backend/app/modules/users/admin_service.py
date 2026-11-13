@@ -73,6 +73,7 @@ class AdminUserData(BaseModel):
     full_name: str | None = Field(default=None, alias="fullName")
     status: UserStatus
     is_email_verified: bool = Field(alias="isEmailVerified")
+    is_test_account: bool = Field(alias="isTestAccount")
     providers: tuple[str, ...]
     roles: tuple[str, ...]
     created_at: datetime = Field(alias="createdAt")
@@ -320,6 +321,7 @@ class AdminUserService:
                 fullName=full_name,
                 status=user.status,
                 isEmailVerified=user.email_verified_at is not None,
+                isTestAccount=user.is_test_account,
                 providers=tuple(providers[user.id]),
                 roles=tuple(roles[user.id]),
                 createdAt=user.created_at,

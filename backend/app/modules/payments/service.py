@@ -619,11 +619,13 @@ class PaymentService:
             dossier = await self._required_dossier(dossier_id, for_update=True)
             if (
                 dossier.is_test
+                or dossier.submission_fee_policy_mode != "LEGACY"
                 or dossier.submission_fee_required
                 or dossier.status is not DossierStatus.APPROVED
             ):
                 raise PaymentConflictError(
-                    "Only an approved non-TEST dossier can receive a payment request."
+                    "Only an approved legacy dossier can receive an admin "
+                    "payment request."
                 )
             if await self._payments.get_active_for_dossier(dossier.id):
                 raise PaymentConflictError(
@@ -834,6 +836,7 @@ class PaymentService:
                         .where(
                             Dossier.status == DossierStatus.APPROVED,
                             Dossier.is_test.is_(False),
+                            Dossier.submission_fee_policy_mode == "LEGACY",
                             Dossier.deleted_at.is_(None),
                         )
                         .order_by(Dossier.updated_at.desc(), Dossier.id.desc())
@@ -1060,11 +1063,13 @@ class PaymentService:
                     reason=prior_waiver.note or normalized_reason,
                 )
             if (
-                dossier.submission_fee_required
+                dossier.is_test
+                or dossier.submission_fee_policy_mode != "LEGACY"
+                or dossier.submission_fee_required
                 or dossier.status is not DossierStatus.APPROVED
             ):
                 raise PaymentConflictError(
-                    "Only an approved dossier can have its payment waived."
+                    "Only an approved legacy dossier can have its payment waived."
                 )
             if await self._payments.get_active_for_dossier(dossier.id):
                 raise PaymentConflictError(

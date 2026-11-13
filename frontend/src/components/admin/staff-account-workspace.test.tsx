@@ -79,6 +79,7 @@ beforeEach(() => {
         fullName: "Nguyễn Minh An",
         status: "ACTIVE",
         isEmailVerified: true,
+        isTestAccount: false,
         providers: ["FIREBASE"],
         roles: ["USER"],
         createdAt: "2026-08-01T00:00:00Z",

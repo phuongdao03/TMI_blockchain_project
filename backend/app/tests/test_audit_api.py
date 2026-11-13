@@ -78,6 +78,7 @@ def test_audit_search_is_scoped_reports_integrity_and_records_the_read() -> None
                     "page": 2,
                     "pageSize": 10,
                     "resourceType": "transaction",
+                    "resourceId": "tx-1",
                     "createdFrom": "2026-08-01T00:00:00Z",
                     "includeAccessEvents": "false",
                 },
@@ -90,6 +91,7 @@ def test_audit_search_is_scoped_reports_integrity_and_records_the_read() -> None
         assert "integrityHash" not in data
         assert service.filters["page"] == 2
         assert service.filters["resource_type"] == "transaction"
+        assert service.filters["resource_id"] == "tx-1"
         assert service.filters["include_access_events"] is False
         assert service.recorded[0]["action"] == "audit.read"
     finally:

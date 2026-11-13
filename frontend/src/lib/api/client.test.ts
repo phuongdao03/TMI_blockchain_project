@@ -9,6 +9,7 @@ import {
   affiliateApi,
   dossierApi,
   employeeInvitationsApi,
+  feeApi,
   hrAdminAttendanceApi,
   hrAdminLeaveApi,
   hrAdminOvertimeApi,
@@ -62,6 +63,33 @@ describe("admin review API client", () => {
         reviewerUserIds: ["reviewer-1"],
         dueAt: "2026-09-10",
       }),
+    });
+  });
+});
+
+describe("fee policy API client", () => {
+  beforeEach(() => {
+    document.cookie = "cns_csrf=csrf-value";
+    vi.restoreAllMocks();
+  });
+
+  it("sends the explicit activation confirmation", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      response({
+        success: true,
+        data: { id: "policy-1", status: "ACTIVE" },
+        meta: { requestId: "policy-approve" },
+      }),
+    );
+
+    await feeApi.approvePolicy("policy/1", true);
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "/api/v1/admin/fee-policies/policy%2F1/approve",
+    );
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
+      method: "POST",
+      body: JSON.stringify({ confirmActivation: true }),
     });
   });
 });
@@ -731,6 +759,7 @@ describe("audit API client", () => {
       pageSize: 25,
       action: "dossier.approved",
       resourceType: "dossier",
+      resourceId: "dossier-1",
       createdFrom: "2026-08-01T00:00:00.000Z",
     });
 
@@ -739,6 +768,7 @@ describe("audit API client", () => {
     expect(url).toContain("page=2");
     expect(url).toContain("action=dossier.approved");
     expect(url).toContain("resourceType=dossier");
+    expect(url).toContain("resourceId=dossier-1");
     expect(url).not.toContain("quy-trinh");
   });
 

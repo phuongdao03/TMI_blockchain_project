@@ -1508,6 +1508,7 @@ export const auditApi = {
     if (filters.action) parameters.set("action", filters.action);
     if (filters.resourceType)
       parameters.set("resourceType", filters.resourceType);
+    if (filters.resourceId) parameters.set("resourceId", filters.resourceId);
     if (filters.createdFrom) parameters.set("createdFrom", filters.createdFrom);
     if (filters.createdTo) parameters.set("createdTo", filters.createdTo);
     if (filters.includeAccessEvents !== undefined)
@@ -2265,10 +2266,13 @@ export const feeApi = {
       body: JSON.stringify(input),
     });
   },
-  approvePolicy(policyId: string) {
+  approvePolicy(policyId: string, confirmActivation: boolean) {
     return request<import("./types").AdminFeePolicy>(
       `/admin/fee-policies/${encodeURIComponent(policyId)}/approve`,
-      { method: "POST" },
+      {
+        method: "POST",
+        body: JSON.stringify({ confirmActivation }),
+      },
     );
   },
   cancelPolicy(policyId: string, reason: string) {

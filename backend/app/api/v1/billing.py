@@ -14,6 +14,7 @@ from app.modules.auth.dependencies import (
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.billing.fees import FeePolicyService
 from app.modules.billing.schemas import (
+    ApproveFeePolicyRequest,
     CancelFeePolicyRequest,
     CreateFeePolicyRequest,
     DecideFeeWaiverRequest,
@@ -149,10 +150,13 @@ async def approve_fee_policy(
     request: Request,
     principal: CsrfProtectedPrincipalDependency,
     session: SessionDependency,
+    payload: ApproveFeePolicyRequest | None = None,
 ) -> SuccessEnvelope[FeePolicyData]:
     _require(principal, "billing.fees.policies.approve")
     policy = await FeePolicyService(session).approve(
-        policy_id, actor_user_id=principal.user_id
+        policy_id,
+        actor_user_id=principal.user_id,
+        confirm_activation=payload.confirm_activation if payload else False,
     )
     return SuccessEnvelope(
         data=FeePolicyData.model_validate(policy),

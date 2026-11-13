@@ -57,6 +57,7 @@ describe("HR report downloads", () => {
           fullName: "Lan",
           email: "lan@example.com",
           isEmailVerified: true,
+          isTestAccount: false,
           roles: ["MODERATOR"],
         },
       ],

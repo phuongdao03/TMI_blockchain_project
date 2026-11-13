@@ -46,6 +46,10 @@ class CancelFeePolicyRequest(BillingSchema):
         return value.strip() if isinstance(value, str) else value
 
 
+class ApproveFeePolicyRequest(BillingSchema):
+    confirm_activation: bool = False
+
+
 class FeePolicyData(BillingSchema):
     id: UUID
     fee_type: str

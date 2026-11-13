@@ -22,6 +22,7 @@ class AuditRepository:
         actor_user_id: UUID | None = None,
         action: str | None = None,
         resource_type: str | None = None,
+        resource_id: str | None = None,
         created_from: datetime | None = None,
         created_to: datetime | None = None,
         include_access_events: bool = True,
@@ -33,6 +34,8 @@ class AuditRepository:
             filters.append(AuditLog.action == action)
         if resource_type is not None:
             filters.append(AuditLog.resource_type == resource_type)
+        if resource_id is not None:
+            filters.append(AuditLog.resource_id == resource_id)
         if created_from is not None:
             filters.append(AuditLog.created_at >= created_from)
         if created_to is not None:

@@ -91,7 +91,11 @@ def test_submission_policy_is_global_and_versions_share_one_scope() -> None:
                 ends_at=None,
                 reason="Global submission policy",
             )
-            first = await service.approve(first_draft.id, actor_user_id=users[1].id)
+            first = await service.approve(
+                first_draft.id,
+                actor_user_id=users[1].id,
+                confirm_activation=True,
+            )
             assert first.dossier_type_id is None
             assert (
                 await service.resolve(
@@ -120,11 +124,70 @@ def test_submission_policy_is_global_and_versions_share_one_scope() -> None:
                 ends_at=None,
                 reason="Global submission price update",
             )
-            second = await service.approve(second_draft.id, actor_user_id=users[1].id)
+            second = await service.approve(
+                second_draft.id,
+                actor_user_id=users[1].id,
+                confirm_activation=True,
+            )
             assert second.version_no == 2
             assert second.dossier_type_id is None
             predecessor = await service.get_policy(first.id, at=next_day)
             assert predecessor.ends_at == next_day
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_submission_policy_requires_explicit_confirmation_and_allows_creator() -> None:
+    async def exercise() -> None:
+        engine, sessions, users, _ = await _database()
+        async with sessions() as session:
+            service = FeePolicyService(session, clock=lambda: NOW)
+            draft = await service.create_draft(
+                actor_user_id=users[0].id,
+                fee_type="DOSSIER_SUBMISSION",
+                dossier_type_id=None,
+                amount_minor=5_000_000,
+                starts_at=NOW,
+                ends_at=None,
+                reason="Initial global submission fee",
+            )
+            with pytest.raises(PriceCatalogConflictError, match="confirmation"):
+                await service.approve(draft.id, actor_user_id=users[0].id)
+
+            active = await service.approve(
+                draft.id,
+                actor_user_id=users[0].id,
+                confirm_activation=True,
+            )
+            assert active.status is FeePolicyStatus.ACTIVE
+            assert active.created_by_user_id == users[0].id
+            assert active.approved_by_user_id == users[0].id
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_other_fee_policies_keep_separation_of_duties() -> None:
+    async def exercise() -> None:
+        engine, sessions, users, dossier_type = await _database()
+        async with sessions() as session:
+            service = FeePolicyService(session, clock=lambda: NOW)
+            draft = await service.create_draft(
+                actor_user_id=users[0].id,
+                fee_type="CERTIFICATE_ISSUANCE",
+                dossier_type_id=dossier_type.id,
+                amount_minor=5_000_000,
+                starts_at=NOW,
+                ends_at=None,
+                reason="Certificate fee",
+            )
+            with pytest.raises(PriceCatalogConflictError, match="different approver"):
+                await service.approve(
+                    draft.id,
+                    actor_user_id=users[0].id,
+                    confirm_activation=True,
+                )
         await engine.dispose()
 
     asyncio.run(exercise())

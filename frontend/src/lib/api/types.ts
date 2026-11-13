@@ -458,6 +458,7 @@ export interface AdminUser {
   email: string;
   fullName: string | null;
   status: AdminUserStatus;
+  isTestAccount: boolean;
   isEmailVerified: boolean;
   providers: AdminUserProvider[];
   roles: string[];
@@ -516,7 +517,7 @@ export type StaffInvitationStatus =
 export interface StaffInvitation {
   id: string;
   email: string;
-  role: StaffAccountRole;
+  role: StaffAccountRole | "USER";
   organizationId: string | null;
   status: StaffInvitationStatus;
   expiresAt: string;
@@ -632,6 +633,7 @@ export interface AuditListFilters {
   actorUserId?: string;
   action?: string;
   resourceType?: string;
+  resourceId?: string;
   createdFrom?: string;
   createdTo?: string;
   includeAccessEvents?: boolean;

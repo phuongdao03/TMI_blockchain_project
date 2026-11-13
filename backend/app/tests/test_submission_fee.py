@@ -68,7 +68,11 @@ async def _install_policy(service, sessions, owner, dossier_id, amount_minor):
             ends_at=None,
             reason="Test fee policy",
         )
-        return await policies.approve(draft.id, actor_user_id=approver.id)
+        return await policies.approve(
+            draft.id,
+            actor_user_id=approver.id,
+            confirm_activation=True,
+        )
 
 
 def test_submission_charge_is_once_and_payment_enters_review_not_issuance() -> None:

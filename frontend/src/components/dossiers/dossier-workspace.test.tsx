@@ -1,9 +1,10 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DossierWorkspace } from "@/components/dossiers/dossier-workspace";
+import { AuthUserProvider } from "@/lib/auth/user-context";
 
 const api = vi.hoisted(() => ({
   get: vi.fn(),
@@ -15,9 +16,13 @@ const api = vi.hoisted(() => ({
   versions: vi.fn(),
   timeline: vi.fn(),
   submissionFee: vi.fn(),
+  signedUrl: vi.fn(),
 }));
 
-vi.mock("@/lib/api/client", () => ({ dossierApi: api }));
+vi.mock("@/lib/api/client", () => ({
+  dossierApi: api,
+  mediaApi: { signedUrl: api.signedUrl },
+}));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
@@ -78,6 +83,17 @@ const dossier = {
 describe("DossierWorkspace", () => {
   it("shows the uploaded file name and safety-check status", async () => {
     const user = userEvent.setup();
+    const openedTab = {
+      opener: {} as Window | null,
+      location: { href: "" },
+      close: vi.fn(),
+    };
+    const openTab = vi
+      .spyOn(window, "open")
+      .mockReturnValue(openedTab as unknown as Window);
+    api.signedUrl.mockResolvedValue({
+      url: "https://files.example.test/doc.pdf",
+    });
     api.get.mockResolvedValue(dossier);
     api.versions.mockResolvedValue([]);
     api.timeline.mockResolvedValue([]);
@@ -99,6 +115,16 @@ describe("DossierWorkspace", () => {
 
     expect(await screen.findByText("quyen-su-dung.pdf")).toBeDefined();
     expect(screen.getByText("Đã tải lên · đã kiểm tra an toàn")).toBeDefined();
+    expect(screen.getByLabelText("Loại tài liệu cần thêm")).toBeDefined();
+    expect(screen.getByRole("button", { name: "Xem tệp" })).toBeDefined();
+    await user.click(screen.getByRole("button", { name: "Xem tệp" }));
+    await vi.waitFor(() =>
+      expect(api.signedUrl).toHaveBeenCalledWith(
+        dossier.evidences[0]!.mediaAssetId,
+      ),
+    );
+    expect(openedTab.location.href).toBe("https://files.example.test/doc.pdf");
+    expect(openTab).toHaveBeenCalledWith("about:blank", "_blank");
   });
 
   it("blocks submission while fee lookup fails and preserves the draft for retry", async () => {
@@ -146,6 +172,89 @@ describe("DossierWorkspace", () => {
       false,
     );
     expect(screen.getByText("Bằng chứng về quyền sử dụng")).toBeDefined();
+  });
+
+  it("keeps a draft unsubmitted until an active global fee policy exists", async () => {
+    const user = userEvent.setup();
+    api.get.mockResolvedValue({ ...dossier, submissionFeeRequired: true });
+    api.versions.mockResolvedValue([]);
+    api.timeline.mockResolvedValue([]);
+    api.submissionFee.mockResolvedValue({
+      feeRequired: true,
+      feeAvailable: false,
+      amountMinor: null,
+      currency: "VND",
+      policyId: null,
+      policyVersionNo: null,
+      description: "Chưa có chính sách phí chung đang có hiệu lực.",
+    });
+    render(
+      <QueryClientProvider
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        }
+      >
+        <DossierWorkspace dossierId={dossier.id} />
+      </QueryClientProvider>,
+    );
+
+    await screen.findByRole("heading", { level: 1, name: dossier.title });
+    await user.click(screen.getByRole("button", { name: /Kiểm tra & nộp/ }));
+    expect(await screen.findByText(/Hồ sơ nháp vẫn được lưu/)).toBeDefined();
+    expect(screen.getByRole("button", { name: "Nộp hồ sơ" })).toHaveProperty(
+      "disabled",
+      true,
+    );
+  });
+
+  it("shows the default TEST skip choice and submits without a fee version", async () => {
+    const user = userEvent.setup();
+    const testDossier = { ...dossier, claims: [] };
+    api.get.mockResolvedValue(testDossier);
+    api.versions.mockResolvedValue([]);
+    api.timeline.mockResolvedValue([]);
+    api.submit.mockResolvedValue({
+      dossier: { ...testDossier, status: "SUBMITTED", canEdit: false },
+      version: { id: "version-test", submittedAt: "2026-07-31T09:00:00Z" },
+    });
+    render(
+      <QueryClientProvider
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        }
+      >
+        <AuthUserProvider
+          user={{
+            id: "test-user",
+            email: "test@example.test",
+            roles: ["USER"],
+            accountType: "INDIVIDUAL_APPLICANT",
+            isTestAccount: true,
+          }}
+        >
+          <DossierWorkspace dossierId={dossier.id} />
+        </AuthUserProvider>
+      </QueryClientProvider>,
+    );
+
+    await screen.findByRole("heading", { level: 1, name: dossier.title });
+    await user.click(screen.getByRole("button", { name: /Kiểm tra & nộp/ }));
+    expect(screen.getByText("Chế độ kiểm thử")).toBeDefined();
+    const mode = screen.getByRole("combobox", { name: "Chế độ kiểm thử" });
+    expect(mode).toHaveProperty("value", "SKIP");
+    expect(
+      screen.getByText(/không trừ ví, không gọi cổng thanh toán thật/),
+    ).toBeDefined();
+    await user.click(screen.getByRole("button", { name: "Nộp hồ sơ" }));
+
+    await waitFor(() =>
+      expect(api.submit).toHaveBeenCalledWith(
+        dossier.id,
+        expect.any(String),
+        null,
+        "SKIP",
+      ),
+    );
   });
   beforeEach(() => {
     vi.clearAllMocks();
@@ -543,20 +652,19 @@ describe("DossierWorkspace", () => {
     });
     await user.click(within(steps).getByRole("button", { name: /Tài liệu/ }));
     expect(screen.queryByLabelText("1. Chọn loại tài liệu")).toBeNull();
-    const mobileRuleSelect = screen.getByRole("combobox", {
+    const ruleSelect = screen.getByRole("combobox", {
       name: "Loại tài liệu cần thêm",
     });
-    expect(mobileRuleSelect).toHaveProperty("value", "OWNERSHIP_DOCUMENT");
-    const other = screen.getByRole("button", { name: /Tài liệu khác/ });
+    expect(ruleSelect).toHaveProperty("value", "OWNERSHIP_DOCUMENT");
+    await user.selectOptions(ruleSelect, "OTHER");
+    expect(ruleSelect).toHaveProperty("value", "OTHER");
     await user.upload(
-      screen.getByLabelText("Chọn tài liệu quyền sở hữu"),
+      screen.getByLabelText("Chọn tài liệu khác"),
       new File(["proof"], "proof.pdf", { type: "application/pdf" }),
     );
-    expect(other.hasAttribute("disabled")).toBe(true);
-    expect(mobileRuleSelect.hasAttribute("disabled")).toBe(true);
+    expect(ruleSelect.hasAttribute("disabled")).toBe(true);
     await user.click(screen.getByRole("button", { name: "Xóa proof.pdf" }));
-    expect(other.hasAttribute("disabled")).toBe(false);
-    expect(mobileRuleSelect.hasAttribute("disabled")).toBe(false);
+    expect(ruleSelect.hasAttribute("disabled")).toBe(false);
   });
 
   it("uses neutral document labels when the dossier type has no document rules", async () => {

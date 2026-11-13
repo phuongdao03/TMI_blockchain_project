@@ -5,10 +5,12 @@ import { describe, expect, it, vi } from "vitest";
 
 import { AdminUserWorkspace } from "@/components/admin/admin-user-workspace";
 import { AuthUserProvider } from "@/lib/auth/user-context";
-import { adminUsersApi } from "@/lib/api/client";
+import { adminUsersApi, auditApi, staffInvitationsApi } from "@/lib/api/client";
 
 vi.mock("@/lib/api/client", () => ({
-  adminUsersApi: { list: vi.fn(), changeStatus: vi.fn() },
+  adminUsersApi: { list: vi.fn(), detail: vi.fn(), changeStatus: vi.fn() },
+  auditApi: { list: vi.fn() },
+  staffInvitationsApi: { createTestApplicant: vi.fn() },
   ApiError: class extends Error {},
 }));
 
@@ -20,7 +22,12 @@ function Wrapper({ children }: { children: ReactNode }) {
           id: "admin-1",
           email: "admin@thv.vn",
           roles: ["SUPER_ADMIN"],
-          permissions: ["users.read", "users.suspend"],
+          permissions: [
+            "users.read",
+            "users.suspend",
+            "audit.read",
+            "admin.staff.manage",
+          ],
           accountType: null,
         }}
       >
@@ -40,6 +47,7 @@ describe("AdminUserWorkspace", () => {
           email: "an@example.com",
           fullName: "Nguyen Van An",
           status: "ACTIVE",
+          isTestAccount: true,
           isEmailVerified: true,
           providers: ["GOOGLE"],
           roles: ["USER"],
@@ -51,7 +59,29 @@ describe("AdminUserWorkspace", () => {
       ],
       meta: { request_id: "request-1", page: 1, pageSize: 20, total: 1 },
     });
+    vi.mocked(adminUsersApi.detail).mockResolvedValue({
+      id: "user-1",
+      email: "an@example.com",
+      fullName: "Nguyen Van An",
+      status: "ACTIVE",
+      isEmailVerified: true,
+      isTestAccount: true,
+      providers: ["GOOGLE"],
+      roles: ["USER"],
+      createdAt: "2026-08-20T09:00:00Z",
+      lastLoginAt: "2026-08-29T09:00:00Z",
+      disabledAt: null,
+      deletedAt: null,
+    });
+    vi.mocked(auditApi.list).mockResolvedValue({
+      success: true,
+      data: [],
+      meta: { request_id: "audit-1", page: 1, pageSize: 20, total: 0 },
+    });
     vi.mocked(adminUsersApi.changeStatus).mockResolvedValue(undefined as never);
+    vi.mocked(staffInvitationsApi.createTestApplicant).mockResolvedValue({
+      id: "invitation-1",
+    } as never);
 
     render(<AdminUserWorkspace />, { wrapper: Wrapper });
 
@@ -61,6 +91,34 @@ describe("AdminUserWorkspace", () => {
     );
     expect(screen.getByTestId("admin-users-mobile").className).toContain(
       "md:hidden",
+    );
+    expect(screen.getAllByText("Tài khoản TEST").length).toBeGreaterThan(0);
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Xem chi tiết" })[0]!,
+    );
+    expect(
+      await screen.findByRole("dialog", { name: "Chi tiết tài khoản" }),
+    ).toBeTruthy();
+    expect(
+      await screen.findByText(/Đây là tài khoản kiểm thử riêng/),
+    ).toBeTruthy();
+    await waitFor(() =>
+      expect(auditApi.list).toHaveBeenCalledWith({
+        page: 1,
+        pageSize: 20,
+        resourceType: "user",
+        resourceId: "user-1",
+      }),
+    );
+
+    fireEvent.change(screen.getByLabelText("Email tài khoản TEST mới"), {
+      target: { value: "test@example.com" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Gửi lời mời TEST" }));
+    await waitFor(() =>
+      expect(staffInvitationsApi.createTestApplicant).toHaveBeenCalledWith(
+        "test@example.com",
+      ),
     );
 
     fireEvent.click(

@@ -8,7 +8,7 @@ import { PaymentOrderReconciliation } from "@/components/admin/payment-order-rec
 import { PaymentRequestWorkspace } from "@/components/admin/payment-request-workspace";
 import { WorkspacePageHeader } from "@/components/layout/workspace-page-header";
 import { Button } from "@/components/ui/button";
-import { dossierApi, feeApi } from "@/lib/api/client";
+import { feeApi } from "@/lib/api/client";
 import { useAuthUser } from "@/lib/auth/user-context";
 import type {
   AdminFeePolicy,
@@ -16,15 +16,6 @@ import type {
   FeePolicyStatus,
   FeeWaiverStatus,
 } from "@/lib/api/types";
-
-type FeeTab = "transactions" | "waivers" | "policies" | "reconciliation";
-
-const labels: Record<FeeTab, string> = {
-  transactions: "Giao dịch",
-  waivers: "Miễn giảm",
-  policies: "Chính sách",
-  reconciliation: "Đối soát",
-};
 
 const policyStatusLabels: Record<FeePolicyStatus, string> = {
   DRAFT: "Bản nháp",
@@ -87,25 +78,18 @@ export function FeeManagementWorkspace({
     can("billing.fees.read") || can("billing.fees.waivers.approve");
   const canListWaivers =
     can("billing.fees.read") || can("billing.fees.waivers.approve");
-  const tabs: FeeTab[] = [
-    ...(can("payments.read") || can("payments.issue")
-      ? (["transactions"] as const)
-      : []),
-    ...(canUseWaiverTab ? (["waivers"] as const) : []),
-    ...(canReadPolicies ? (["policies"] as const) : []),
-    ...(can("payments.read") || can("payments.reconcile")
-      ? (["reconciliation"] as const)
-      : []),
-  ];
-  const [tab, setTab] = useState<FeeTab>(tabs[0] ?? "policies");
-  const [policyTypeId, setPolicyTypeId] = useState("");
+  const canReadTransactions = can("payments.read");
+  const canIssueLegacyRequests = can("payments.issue");
+  const canReconcile = can("payments.read") || can("payments.reconcile");
   const [policyAmount, setPolicyAmount] = useState("5000000");
   const [policyName, setPolicyName] = useState("");
   const [policyReason, setPolicyReason] = useState("");
   const [policyStartsAt, setPolicyStartsAt] = useState("");
   const [policyEndsAt, setPolicyEndsAt] = useState("");
-  const [policyFeeType, setPolicyFeeType] = useState("DOSSIER_SUBMISSION");
   const [policyCancelReason, setPolicyCancelReason] = useState("");
+  const [reviewPolicyId, setReviewPolicyId] = useState<string | null>(null);
+  const [confirmActivation, setConfirmActivation] = useState(false);
+  const [createPolicyOpen, setCreatePolicyOpen] = useState(false);
   const [waiverDossierId, setWaiverDossierId] = useState(
     initialDossierId ?? "",
   );
@@ -123,13 +107,16 @@ export function FeeManagementWorkspace({
     queryFn: feeApi.listWaivers,
     enabled: canListWaivers,
   });
-  const dossierTypes = useQuery({
-    queryKey: ["dossier-types"],
-    queryFn: dossierApi.listTypes,
-    enabled:
-      can("billing.fees.policies.create") &&
-      policyFeeType !== "DOSSIER_SUBMISSION",
-  });
+  const submissionPolicies = (policies.data ?? []).filter(
+    (policy) => policy.feeType === "DOSSIER_SUBMISSION",
+  );
+  const activeSubmissionPolicy =
+    submissionPolicies.find((policy) => policy.status === "ACTIVE") ??
+    submissionPolicies.find((policy) => policy.status === "SCHEDULED") ??
+    null;
+  const reviewPolicy = submissionPolicies.find(
+    (policy) => policy.id === reviewPolicyId,
+  );
 
   const refreshFees = async () => {
     await Promise.all([
@@ -141,10 +128,7 @@ export function FeeManagementWorkspace({
   const createPolicy = useMutation({
     mutationFn: () =>
       feeApi.createPolicy({
-        feeType: policyFeeType,
-        ...(policyFeeType === "DOSSIER_SUBMISSION"
-          ? {}
-          : { dossierTypeId: policyTypeId }),
+        feeType: "DOSSIER_SUBMISSION",
         amountMinor: Number(policyAmount),
         startsAt: new Date(policyStartsAt).toISOString(),
         ...(policyEndsAt
@@ -153,17 +137,30 @@ export function FeeManagementWorkspace({
         ...(policyName.trim() ? { displayName: policyName.trim() } : {}),
         reason: policyReason.trim(),
       }),
-    onSuccess: async () => {
-      setPolicyAmount("");
+    onSuccess: async (policy) => {
+      setPolicyAmount("5000000");
       setPolicyName("");
       setPolicyReason("");
+      setCreatePolicyOpen(false);
+      setReviewPolicyId(policy.id);
+      setConfirmActivation(false);
       await refreshFees();
     },
     onError: (error) => setActionError(isFeeError(error)),
   });
   const approvePolicy = useMutation({
-    mutationFn: feeApi.approvePolicy,
-    onSuccess: refreshFees,
+    mutationFn: ({
+      policyId,
+      confirmed,
+    }: {
+      policyId: string;
+      confirmed: boolean;
+    }) => feeApi.approvePolicy(policyId, confirmed),
+    onSuccess: async () => {
+      setReviewPolicyId(null);
+      setConfirmActivation(false);
+      await refreshFees();
+    },
     onError: (error) => setActionError(isFeeError(error)),
   });
   const cancelPolicy = useMutation({
@@ -201,7 +198,13 @@ export function FeeManagementWorkspace({
     onError: (error) => setActionError(isFeeError(error)),
   });
 
-  if (tabs.length === 0) {
+  if (
+    !canReadPolicies &&
+    !canUseWaiverTab &&
+    !canReadTransactions &&
+    !canIssueLegacyRequests &&
+    !canReconcile
+  ) {
     return (
       <div className="workspace-screen mx-auto max-w-6xl pb-12">
         <WorkspacePageHeader
@@ -222,7 +225,6 @@ export function FeeManagementWorkspace({
   const submitPolicy = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (
-      (policyFeeType !== "DOSSIER_SUBMISSION" && !policyTypeId) ||
       !Number.isSafeInteger(Number(policyAmount)) ||
       Number(policyAmount) <= 0 ||
       policyReason.trim().length < 5 ||
@@ -242,300 +244,227 @@ export function FeeManagementWorkspace({
   return (
     <div className="workspace-screen mx-auto max-w-7xl space-y-6 pb-12">
       <WorkspacePageHeader
-        description="Quản lý giao dịch, cấp miễn phí có ghi nhận, chính sách phí theo thời hạn và đối soát."
+        description="Theo dõi mức phí chung, phiên bản chính sách và giao dịch hồ sơ."
         section="Tài chính"
         title="Quản lý phí hồ sơ"
       />
-      <div
-        aria-label="Phân hệ quản lý phí"
-        className="flex flex-wrap gap-2"
-        role="tablist"
-      >
-        {tabs.map((item) => (
-          <button
-            aria-selected={tab === item}
-            className={`min-h-11 rounded-xl border px-4 text-sm font-semibold transition-colors ${tab === item ? "border-primary-700 bg-primary-700 text-white" : "border-[var(--theme-border)] bg-[var(--theme-surface)] text-[var(--theme-text)]"}`}
-            key={item}
-            onClick={() => {
-              setTab(item);
-              setActionError("");
-            }}
-            role="tab"
-            type="button"
-          >
-            {labels[item]}
-          </button>
-        ))}
-      </div>
 
-      {tab === "transactions" ? (
-        <div className="space-y-6" role="tabpanel">
-          {can("payments.issue") ? (
-            <PaymentRequestWorkspace
-              initialDossierId={initialDossierId}
-              showReconciliation={false}
-            />
-          ) : null}
-          {can("payments.read") ? (
-            <PaymentHistoryWorkspace />
-          ) : (
-            <p className="rounded-xl border border-[var(--theme-border)] p-4 text-sm text-[var(--theme-muted)]">
-              Tài khoản có thể tạo yêu cầu thu phí nhưng chưa có quyền xem lịch
-              sử giao dịch.
-            </p>
-          )}
-        </div>
-      ) : null}
-
-      {tab === "waivers" ? (
-        <section className="space-y-5" role="tabpanel">
-          {can("billing.fees.waivers.approve") ? (
-            <form
-              className="grid gap-4 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5 md:grid-cols-2"
-              onSubmit={submitWaiver}
-            >
-              <h2 className="text-lg font-bold md:col-span-2">
-                Miễn toàn bộ phí nộp hồ sơ
+      {canReadPolicies ? (
+        <section
+          aria-labelledby="current-submission-fee-title"
+          className="space-y-5 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5 sm:p-6"
+        >
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-[var(--theme-muted)]">
+                Phí nộp hồ sơ hiện hành
+              </p>
+              <h2
+                className="mt-1 text-2xl font-bold tracking-tight"
+                id="current-submission-fee-title"
+              >
+                {activeSubmissionPolicy
+                  ? money(activeSubmissionPolicy.amountMinor)
+                  : "Chưa có mức phí hiệu lực"}
               </h2>
-              <label className="grid gap-1.5 text-sm font-semibold">
-                Mã hồ sơ
-                <input
-                  className={fieldClass}
-                  onChange={(event) => setWaiverDossierId(event.target.value)}
-                  required
-                  value={waiverDossierId}
-                />
-              </label>
-              <label className="grid gap-1.5 text-sm font-semibold">
-                Lý do
-                <input
-                  className={fieldClass}
-                  maxLength={1000}
-                  minLength={5}
-                  onChange={(event) => setWaiverReason(event.target.value)}
-                  required
-                  value={waiverReason}
-                />
-              </label>
-              <div className="flex flex-wrap items-center gap-3 md:col-span-2">
-                <Button disabled={grantWaiver.isPending} type="submit">
-                  Cấp miễn phí
+              {activeSubmissionPolicy ? (
+                <p className="mt-2 text-sm text-[var(--theme-muted)]">
+                  Hiệu lực từ {formatDate(activeSubmissionPolicy.startsAt)} ·{" "}
+                  {policyStatusLabels[activeSubmissionPolicy.status]} · phiên
+                  bản v{activeSubmissionPolicy.versionNo}
+                </p>
+              ) : (
+                <p className="mt-2 max-w-2xl text-sm text-[var(--theme-muted)]">
+                  Hồ sơ mới chưa thể nộp thu phí đến khi Admin xác nhận kích
+                  hoạt một chính sách chung.
+                </p>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {can("billing.fees.policies.create") ? (
+                <Button
+                  onClick={() => setCreatePolicyOpen((open) => !open)}
+                  type="button"
+                >
+                  Thay đổi mức phí
                 </Button>
-                <span className="text-xs text-[var(--theme-muted)]">
-                  Ghi nhận người cấp, thời điểm, mức phí gốc và lý do vào nhật
-                  ký.
-                </span>
-              </div>
-            </form>
-          ) : null}
-          {can("billing.fees.waivers.approve") ? (
-            <label className="grid max-w-2xl gap-1.5 text-sm font-semibold">
-              Lý do quyết định
-              <input
-                className={fieldClass}
-                maxLength={1000}
-                minLength={5}
-                onChange={(event) => setDecisionReason(event.target.value)}
-                value={decisionReason}
-              />
-            </label>
-          ) : null}
-          {!canListWaivers ? (
-            <p className="rounded-xl border border-[var(--theme-border)] p-4 text-sm text-[var(--theme-muted)]">
-              Đề nghị đã gửi sẽ được người có quyền phê duyệt xem xét.
+              ) : null}
+              <Button
+                onClick={() =>
+                  document
+                    .getElementById("submission-fee-history")
+                    ?.scrollIntoView({ behavior: "smooth", block: "start" })
+                }
+                type="button"
+                variant="outline"
+              >
+                Xem lịch sử
+              </Button>
+            </div>
+          </div>
+          {policies.isPending ? (
+            <p aria-busy="true" className="text-sm text-[var(--theme-muted)]">
+              Đang tải chính sách phí…
             </p>
           ) : null}
-          {canListWaivers && waivers.isPending ? (
-            <p aria-busy="true">Đang tải đề nghị miễn giảm…</p>
-          ) : null}
-          {canListWaivers && waivers.isError ? (
-            <p role="alert">Không tải được danh sách đề nghị miễn giảm.</p>
-          ) : null}
-          {canListWaivers && waivers.data?.length ? (
-            <ul className="divide-y divide-[var(--theme-border)] rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-5">
-              {waivers.data.map((waiver: AdminFeeWaiver) => (
-                <li
-                  className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between"
-                  key={waiver.id}
-                >
-                  <div className="space-y-1 text-sm">
-                    <p className="font-semibold">
-                      {waiver.dossierId} · {money(waiver.amountMinor)}
-                    </p>
-                    <p className="text-[var(--theme-muted)]">
-                      {waiver.feeType} · {waiverStatusLabels[waiver.status]} ·
-                      hết hạn {formatDate(waiver.expiresAt)}
-                    </p>
-                    <p className="text-[var(--theme-muted)]">{waiver.reason}</p>
-                    {waiver.status === "REQUESTED" &&
-                    waiver.requestedByUserId === user?.id ? (
-                      <p className="text-xs text-amber-700">
-                        Người yêu cầu không thể tự phê duyệt.
-                      </p>
-                    ) : null}
-                  </div>
-                  {waiver.status === "REQUESTED" &&
-                  waiver.requestedByUserId !== user?.id &&
-                  can("billing.fees.waivers.approve") ? (
-                    <div className="flex gap-2">
-                      <Button
-                        disabled={
-                          decisionReason.trim().length < 5 ||
-                          decideWaiver.isPending
-                        }
-                        onClick={() =>
-                          decideWaiver.mutate({
-                            waiverId: waiver.id,
-                            approve: true,
-                          })
-                        }
-                        type="button"
-                      >
-                        Phê duyệt
-                      </Button>
-                      <Button
-                        disabled={
-                          decisionReason.trim().length < 5 ||
-                          decideWaiver.isPending
-                        }
-                        onClick={() =>
-                          decideWaiver.mutate({
-                            waiverId: waiver.id,
-                            approve: false,
-                          })
-                        }
-                        type="button"
-                        variant="outline"
-                      >
-                        Từ chối
-                      </Button>
-                    </div>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-          ) : canListWaivers && waivers.isSuccess ? (
-            <p className="rounded-xl border border-[var(--theme-border)] p-4 text-sm text-[var(--theme-muted)]">
-              Chưa có đề nghị miễn giảm.
+          {policies.isError ? (
+            <p role="alert" className="text-sm text-red-700">
+              Không tải được chính sách phí. Hãy thử tải lại trang.
             </p>
           ) : null}
         </section>
       ) : null}
 
-      {tab === "policies" ? (
-        <section className="space-y-5" role="tabpanel">
-          {can("billing.fees.policies.create") ? (
-            <form
-              className="grid gap-4 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5 md:grid-cols-2 xl:grid-cols-3"
-              onSubmit={submitPolicy}
+      {can("billing.fees.policies.create") && createPolicyOpen ? (
+        <form
+          className="grid gap-4 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5 md:grid-cols-2 xl:grid-cols-3"
+          onSubmit={submitPolicy}
+        >
+          <div className="md:col-span-2 xl:col-span-3">
+            <h2 className="text-lg font-bold">Tạo mức phí chung mới</h2>
+            <p className="mt-1 text-sm text-[var(--theme-muted)]">
+              Áp dụng cho mọi loại hồ sơ. Bản nháp chỉ có hiệu lực sau bước xem
+              lại và xác nhận.
+            </p>
+          </div>
+          <label className="grid gap-1.5 text-sm font-semibold">
+            Mức phí (VND)
+            <input
+              className={fieldClass}
+              min="1"
+              onChange={(event) => setPolicyAmount(event.target.value)}
+              required
+              type="number"
+              value={policyAmount}
+            />
+          </label>
+          <label className="grid gap-1.5 text-sm font-semibold">
+            Tên hiển thị (tùy chọn)
+            <input
+              className={fieldClass}
+              maxLength={255}
+              onChange={(event) => setPolicyName(event.target.value)}
+              value={policyName}
+            />
+          </label>
+          <label className="grid gap-1.5 text-sm font-semibold">
+            Bắt đầu áp dụng
+            <input
+              className={fieldClass}
+              onChange={(event) => setPolicyStartsAt(event.target.value)}
+              required
+              type="datetime-local"
+              value={policyStartsAt}
+            />
+          </label>
+          <label className="grid gap-1.5 text-sm font-semibold">
+            Kết thúc (tùy chọn)
+            <input
+              className={fieldClass}
+              onChange={(event) => setPolicyEndsAt(event.target.value)}
+              type="datetime-local"
+              value={policyEndsAt}
+            />
+          </label>
+          <label className="grid gap-1.5 text-sm font-semibold md:col-span-2 xl:col-span-3">
+            Căn cứ / lý do
+            <input
+              className={fieldClass}
+              maxLength={1000}
+              minLength={5}
+              onChange={(event) => setPolicyReason(event.target.value)}
+              required
+              value={policyReason}
+            />
+          </label>
+          <div className="flex flex-wrap gap-2 md:col-span-2 xl:col-span-3">
+            <Button disabled={createPolicy.isPending} type="submit">
+              {createPolicy.isPending ? "Đang tạo…" : "Tạo bản nháp"}
+            </Button>
+            <Button
+              onClick={() => setCreatePolicyOpen(false)}
+              type="button"
+              variant="outline"
             >
-              <h2 className="text-lg font-bold md:col-span-2 xl:col-span-3">
-                Tạo chính sách phí nháp
-              </h2>
-              <label className="grid gap-1.5 text-sm font-semibold">
-                Loại phí
-                <select
-                  className={fieldClass}
-                  onChange={(event) => setPolicyFeeType(event.target.value)}
-                  value={policyFeeType}
-                >
-                  <option value="DOSSIER_SUBMISSION">Phí nộp hồ sơ</option>
-                  <option value="CERTIFICATE_ISSUANCE">
-                    Phí cấp chứng nhận
-                  </option>
-                </select>
-              </label>
-              {policyFeeType !== "DOSSIER_SUBMISSION" ? (
-                <label className="grid gap-1.5 text-sm font-semibold">
-                  Loại hồ sơ
-                  <select
-                    className={fieldClass}
-                    onChange={(event) => setPolicyTypeId(event.target.value)}
-                    required
-                    value={policyTypeId}
-                  >
-                    <option value="">Chọn loại hồ sơ</option>
-                    {dossierTypes.data
-                      ?.filter((type) => type.isActive)
-                      .map((type) => (
-                        <option key={type.id} value={type.id}>
-                          {type.name}
-                        </option>
-                      ))}
-                  </select>
-                </label>
-              ) : (
-                <p className="self-center text-sm text-[var(--theme-muted)]">
-                  Phí áp dụng chung cho mọi loại hồ sơ.
-                </p>
-              )}
-              <label className="grid gap-1.5 text-sm font-semibold">
-                Mức phí (VND)
-                <input
-                  className={fieldClass}
-                  min="1"
-                  onChange={(event) => setPolicyAmount(event.target.value)}
-                  required
-                  type="number"
-                  value={policyAmount}
-                />
-              </label>
-              <label className="grid gap-1.5 text-sm font-semibold">
-                Tên hiển thị
-                <input
-                  className={fieldClass}
-                  maxLength={255}
-                  onChange={(event) => setPolicyName(event.target.value)}
-                  value={policyName}
-                />
-              </label>
-              <label className="grid gap-1.5 text-sm font-semibold">
-                Bắt đầu áp dụng
-                <input
-                  className={fieldClass}
-                  onChange={(event) => setPolicyStartsAt(event.target.value)}
-                  required
-                  type="datetime-local"
-                  value={policyStartsAt}
-                />
-              </label>
-              <label className="grid gap-1.5 text-sm font-semibold">
-                Kết thúc (tùy chọn)
-                <input
-                  className={fieldClass}
-                  onChange={(event) => setPolicyEndsAt(event.target.value)}
-                  type="datetime-local"
-                  value={policyEndsAt}
-                />
-              </label>
-              <label className="grid gap-1.5 text-sm font-semibold md:col-span-2 xl:col-span-3">
-                Căn cứ / lý do
-                <input
-                  className={fieldClass}
-                  maxLength={1000}
-                  minLength={5}
-                  onChange={(event) => setPolicyReason(event.target.value)}
-                  required
-                  value={policyReason}
-                />
-              </label>
-              <div className="md:col-span-2 xl:col-span-3">
-                <Button disabled={createPolicy.isPending} type="submit">
-                  Tạo chính sách
-                </Button>
-                <p className="mt-2 text-xs text-[var(--theme-muted)]">
-                  Chính sách chỉ có hiệu lực sau khi một quản trị viên khác phê
-                  duyệt.
-                </p>
-              </div>
-            </form>
-          ) : null}
-          {policies.isPending ? (
-            <p aria-busy="true">Đang tải chính sách phí…</p>
-          ) : null}
-          {policies.isError ? (
-            <p role="alert">Không tải được danh sách chính sách phí.</p>
-          ) : null}
+              Đóng
+            </Button>
+          </div>
+        </form>
+      ) : null}
+
+      {reviewPolicy ? (
+        <section
+          aria-labelledby="policy-review-title"
+          className="space-y-4 rounded-2xl border border-amber-300 bg-amber-50 p-5 text-amber-950"
+        >
+          <div>
+            <h2 className="text-lg font-bold" id="policy-review-title">
+              Xem lại trước khi kích hoạt
+            </h2>
+            <p className="mt-1 text-sm">
+              Kiểm tra mức phí và ngày hiệu lực. Xác nhận sẽ ghi audit và kích
+              hoạt hoặc lên lịch chính sách chung.
+            </p>
+          </div>
+          <dl className="grid gap-3 text-sm sm:grid-cols-2">
+            <div>
+              <dt className="font-semibold">Mức phí</dt>
+              <dd>{money(reviewPolicy.amountMinor)}</dd>
+            </div>
+            <div>
+              <dt className="font-semibold">Ngày hiệu lực</dt>
+              <dd>{formatDate(reviewPolicy.startsAt)}</dd>
+            </div>
+            <div>
+              <dt className="font-semibold">Lý do</dt>
+              <dd>{reviewPolicy.reason}</dd>
+            </div>
+            <div>
+              <dt className="font-semibold">Trạng thái</dt>
+              <dd>{policyStatusLabels[reviewPolicy.status]}</dd>
+            </div>
+          </dl>
+          <label className="flex items-start gap-3 text-sm font-semibold">
+            <input
+              checked={confirmActivation}
+              className="mt-1 size-4 accent-amber-800"
+              onChange={(event) => setConfirmActivation(event.target.checked)}
+              type="checkbox"
+            />
+            Tôi xác nhận mức phí và ngày hiệu lực trên là chính xác.
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              disabled={!confirmActivation || approvePolicy.isPending}
+              onClick={() =>
+                approvePolicy.mutate({
+                  policyId: reviewPolicy.id,
+                  confirmed: true,
+                })
+              }
+              type="button"
+            >
+              {approvePolicy.isPending
+                ? "Đang kích hoạt…"
+                : "Xác nhận kích hoạt"}
+            </Button>
+            <Button
+              onClick={() => {
+                setReviewPolicyId(null);
+                setConfirmActivation(false);
+              }}
+              type="button"
+              variant="outline"
+            >
+              Để sau
+            </Button>
+          </div>
+        </section>
+      ) : null}
+
+      {canReadPolicies ? (
+        <section className="space-y-4" id="submission-fee-history">
+          <h2 className="text-lg font-bold">Lịch sử phiên bản phí chung</h2>
           {can("billing.fees.policies.cancel") ? (
             <label className="grid max-w-2xl gap-1.5 text-sm font-semibold">
               Lý do hủy chính sách
@@ -555,33 +484,35 @@ export function FeeManagementWorkspace({
                   className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between"
                   key={policy.id}
                 >
-                  <div className="space-y-1 text-sm">
+                  <div className="min-w-0 space-y-1 text-sm">
                     <p className="font-semibold">
                       {policy.displayName} · {money(policy.amountMinor)} · v
                       {policy.versionNo}
                     </p>
                     <p className="text-[var(--theme-muted)]">
-                      {policy.feeType} · {policyStatusLabels[policy.status]} ·{" "}
+                      {policy.feeType === "DOSSIER_SUBMISSION"
+                        ? "Phí nộp hồ sơ chung"
+                        : policy.feeType}{" "}
+                      · {policyStatusLabels[policy.status]} ·{" "}
                       {formatDate(policy.startsAt)} –{" "}
                       {formatDate(policy.endsAt)}
                     </p>
-                    <p className="text-[var(--theme-muted)]">{policy.reason}</p>
-                    {policy.approvedByUserId ? (
-                      <p className="text-xs text-[var(--theme-muted)]">
-                        Duyệt bởi {policy.approvedByUserId}
-                      </p>
-                    ) : null}
+                    <p className="break-words text-[var(--theme-muted)]">
+                      {policy.reason}
+                    </p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex shrink-0 gap-2">
                     {policy.status === "DRAFT" &&
-                    policy.createdByUserId !== user?.id &&
                     can("billing.fees.policies.approve") ? (
                       <Button
-                        disabled={approvePolicy.isPending}
-                        onClick={() => approvePolicy.mutate(policy.id)}
+                        onClick={() => {
+                          setReviewPolicyId(policy.id);
+                          setConfirmActivation(false);
+                          window.scrollTo({ top: 0, behavior: "smooth" });
+                        }}
                         type="button"
                       >
-                        Phê duyệt
+                        Xem lại
                       </Button>
                     ) : null}
                     {(policy.status === "DRAFT" ||
@@ -610,17 +541,173 @@ export function FeeManagementWorkspace({
             </ul>
           ) : policies.isSuccess ? (
             <p className="rounded-xl border border-[var(--theme-border)] p-4 text-sm text-[var(--theme-muted)]">
-              Chưa có chính sách phí. Mức thu mới chỉ được áp dụng sau khi tạo
-              và phê duyệt chính sách.
+              Chưa có phiên bản phí nào.
             </p>
+          ) : policies.isPending ? (
+            <p aria-busy="true">Đang tải chính sách phí…</p>
+          ) : policies.isError ? (
+            <p role="alert">Không tải được danh sách chính sách phí.</p>
           ) : null}
         </section>
       ) : null}
 
-      {tab === "reconciliation" ? (
-        <div role="tabpanel">
-          <PaymentOrderReconciliation />
-        </div>
+      {canUseWaiverTab ? (
+        <details className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-5">
+          <summary className="cursor-pointer text-base font-bold">
+            Miễn phí hồ sơ thật
+          </summary>
+          <section className="mt-5 space-y-5">
+            {can("billing.fees.waivers.approve") ? (
+              <form
+                className="grid gap-4 rounded-xl border border-[var(--theme-border)] p-4 md:grid-cols-2"
+                onSubmit={submitWaiver}
+              >
+                <h2 className="text-lg font-bold md:col-span-2">
+                  Cấp miễn toàn bộ phí nộp hồ sơ
+                </h2>
+                <label className="grid gap-1.5 text-sm font-semibold">
+                  Mã hồ sơ
+                  <input
+                    className={fieldClass}
+                    onChange={(event) => setWaiverDossierId(event.target.value)}
+                    required
+                    value={waiverDossierId}
+                  />
+                </label>
+                <label className="grid gap-1.5 text-sm font-semibold">
+                  Lý do
+                  <input
+                    className={fieldClass}
+                    maxLength={1000}
+                    minLength={5}
+                    onChange={(event) => setWaiverReason(event.target.value)}
+                    required
+                    value={waiverReason}
+                  />
+                </label>
+                <div className="flex flex-wrap items-center gap-3 md:col-span-2">
+                  <Button disabled={grantWaiver.isPending} type="submit">
+                    Cấp miễn phí
+                  </Button>
+                  <span className="text-xs text-[var(--theme-muted)]">
+                    Ghi nhận người cấp, thời điểm, mức phí gốc và lý do vào nhật
+                    ký.
+                  </span>
+                </div>
+              </form>
+            ) : null}
+            {can("billing.fees.waivers.approve") ? (
+              <label className="grid max-w-2xl gap-1.5 text-sm font-semibold">
+                Lý do quyết định
+                <input
+                  className={fieldClass}
+                  maxLength={1000}
+                  minLength={5}
+                  onChange={(event) => setDecisionReason(event.target.value)}
+                  value={decisionReason}
+                />
+              </label>
+            ) : null}
+            {waivers.isPending ? (
+              <p aria-busy="true">Đang tải yêu cầu miễn phí…</p>
+            ) : null}
+            {waivers.isError ? (
+              <p role="alert">Không tải được danh sách miễn phí.</p>
+            ) : null}
+            {waivers.data?.length ? (
+              <ul className="divide-y divide-[var(--theme-border)] rounded-xl border border-[var(--theme-border)] px-4">
+                {waivers.data.map((waiver: AdminFeeWaiver) => (
+                  <li
+                    className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between"
+                    key={waiver.id}
+                  >
+                    <div className="space-y-1 text-sm">
+                      <p className="font-semibold">
+                        {waiver.dossierId} ? {money(waiver.amountMinor)}
+                      </p>
+                      <p className="text-[var(--theme-muted)]">
+                        {waiver.feeType} ? {waiverStatusLabels[waiver.status]} ?
+                        hết hạn {formatDate(waiver.expiresAt)}
+                      </p>
+                      <p className="text-[var(--theme-muted)]">
+                        {waiver.reason}
+                      </p>
+                      {waiver.status === "REQUESTED" &&
+                      waiver.requestedByUserId === user?.id ? (
+                        <p className="text-xs text-amber-700">
+                          Người yêu cầu không thể tự phê duyệt.
+                        </p>
+                      ) : null}
+                    </div>
+                    {waiver.status === "REQUESTED" &&
+                    waiver.requestedByUserId !== user?.id &&
+                    can("billing.fees.waivers.approve") ? (
+                      <div className="flex gap-2">
+                        <Button
+                          disabled={
+                            decisionReason.trim().length < 5 ||
+                            decideWaiver.isPending
+                          }
+                          onClick={() =>
+                            decideWaiver.mutate({
+                              waiverId: waiver.id,
+                              approve: true,
+                            })
+                          }
+                          type="button"
+                        >
+                          Duyệt
+                        </Button>
+                        <Button
+                          disabled={
+                            decisionReason.trim().length < 5 ||
+                            decideWaiver.isPending
+                          }
+                          onClick={() =>
+                            decideWaiver.mutate({
+                              waiverId: waiver.id,
+                              approve: false,
+                            })
+                          }
+                          type="button"
+                          variant="outline"
+                        >
+                          Từ chối
+                        </Button>
+                      </div>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            ) : waivers.isSuccess ? (
+              <p className="rounded-xl border border-[var(--theme-border)] p-4 text-sm text-[var(--theme-muted)]">
+                Chưa có yêu cầu miễn phí.
+              </p>
+            ) : null}
+          </section>
+        </details>
+      ) : null}
+
+      {canReadTransactions || canIssueLegacyRequests || canReconcile ? (
+        <details className="rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-5">
+          <summary className="cursor-pointer text-base font-bold">
+            Giao dịch và đối soát hồ sơ legacy
+          </summary>
+          <div className="mt-5 space-y-6">
+            <p className="rounded-xl bg-[var(--theme-elevated)] p-3 text-sm text-[var(--theme-muted)]">
+              Yêu cầu thu phí thủ công chỉ dành cho hồ sơ legacy đã được duyệt;
+              hồ sơ mới thanh toán phí chung trước thẩm định.
+            </p>
+            {canIssueLegacyRequests ? (
+              <PaymentRequestWorkspace
+                initialDossierId={initialDossierId}
+                showReconciliation={false}
+              />
+            ) : null}
+            {canReadTransactions ? <PaymentHistoryWorkspace /> : null}
+            {canReconcile ? <PaymentOrderReconciliation /> : null}
+          </div>
+        </details>
       ) : null}
       {actionError ? (
         <p

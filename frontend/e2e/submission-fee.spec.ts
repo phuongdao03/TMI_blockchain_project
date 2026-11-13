@@ -103,14 +103,14 @@ test("submission fee checkout can resume and payment leads to review", async ({
   await expect(
     page.getByText("Thanh toán phí nộp để bắt đầu thẩm định"),
   ).toBeVisible();
-  for (const width of [360, 375, 390, 430, 768, 1024, 1440]) {
+  for (const width of [320, 375, 390, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
     ).toBe(true);
-    if ([390, 1440].includes(width))
+    if ([320, 390, 1440].includes(width))
       await page.screenshot({
         path: info.outputPath(`submission-fee-${width}.png`),
         fullPage: true,

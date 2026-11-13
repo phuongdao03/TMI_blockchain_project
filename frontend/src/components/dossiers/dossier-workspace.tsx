@@ -33,7 +33,7 @@ import { FileUploader } from "@/components/media/file-uploader";
 import { DossierPaymentAction } from "@/components/payments/dossier-payment-action";
 import { PrivateDocumentVerification } from "@/components/documents/private-document-verification";
 import { Button } from "@/components/ui/button";
-import { dossierApi } from "@/lib/api/client";
+import { dossierApi, mediaApi } from "@/lib/api/client";
 import { displayCnsDossierCode } from "@/lib/brand/identifiers";
 import type {
   DossierDetail,
@@ -195,6 +195,29 @@ function EvidenceItem({
   evidence: DossierEvidence;
   onRemove: (id: string) => void;
 }) {
+  const [viewError, setViewError] = useState(false);
+  const [viewPending, setViewPending] = useState(false);
+
+  const openEvidence = async () => {
+    const tab = window.open("about:blank", "_blank");
+    if (!tab) {
+      setViewError(true);
+      return;
+    }
+    tab.opener = null;
+    setViewError(false);
+    setViewPending(true);
+    try {
+      const delivery = await mediaApi.signedUrl(evidence.mediaAssetId);
+      tab.location.href = delivery.url;
+    } catch {
+      tab.close();
+      setViewError(true);
+    } finally {
+      setViewPending(false);
+    }
+  };
+
   return (
     <article className="grid gap-3 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-elevated)] p-4 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center">
       <span className="grid size-10 place-items-center rounded-full bg-emerald-50 text-emerald-700">
@@ -222,23 +245,45 @@ function EvidenceItem({
           {evidenceScopeLabel(evidence.accessScope)}
         </p>
       </div>
-      {canEdit ? (
+      <div className="flex flex-wrap items-center gap-2 sm:justify-end">
         <Button
-          aria-label={`Xóa ${evidence.title}`}
-          className="text-red-700 hover:bg-red-50"
-          onClick={() => onRemove(evidence.id)}
-          variant="ghost"
+          disabled={viewPending}
+          onClick={() => void openEvidence()}
+          type="button"
+          variant="outline"
         >
-          <Trash2 aria-hidden="true" className="size-4" />
-          Xóa
+          {viewPending ? "Đang mở…" : "Xem tệp"}
         </Button>
-      ) : (
-        <span className="inline-flex items-center gap-1.5 text-xs font-bold text-neutral-500">
-          <LockKeyhole aria-hidden="true" className="size-4" />
-          Đã khóa
-        </span>
-      )}
-      <PrivateDocumentVerification mediaId={evidence.mediaAssetId} />
+        {canEdit ? (
+          <Button
+            aria-label={`Xóa ${evidence.title}`}
+            className="text-red-700 hover:bg-red-50"
+            onClick={() => onRemove(evidence.id)}
+            variant="ghost"
+          >
+            <Trash2 aria-hidden="true" className="size-4" />
+            Xóa
+          </Button>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 text-xs font-bold text-neutral-500">
+            <LockKeyhole aria-hidden="true" className="size-4" />
+            Đã khóa
+          </span>
+        )}
+        {viewError ? (
+          <p className="basis-full text-xs text-red-700" role="alert">
+            Không mở được tệp. Hãy cho phép cửa sổ mới và thử lại.
+          </p>
+        ) : null}
+      </div>
+      <details className="sm:col-span-3">
+        <summary className="cursor-pointer text-sm font-semibold text-[var(--theme-muted)]">
+          Đối chiếu tính toàn vẹn
+        </summary>
+        <div className="mt-2">
+          <PrivateDocumentVerification mediaId={evidence.mediaAssetId} />
+        </div>
+      </details>
     </article>
   );
 }
@@ -873,7 +918,7 @@ export function DossierWorkspace({
                       </legend>
                       <select
                         aria-label="Loại tài liệu cần thêm"
-                        className="mt-2 min-h-12 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 text-sm font-semibold text-[var(--theme-text)] sm:hidden"
+                        className="mt-2 min-h-12 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 text-sm font-semibold text-[var(--theme-text)]"
                         disabled={queueLocked || attach.isPending}
                         onChange={(event) => {
                           setEvidenceType(event.target.value);
@@ -890,40 +935,6 @@ export function DossierWorkspace({
                           </option>
                         ))}
                       </select>
-                      <div className="hidden gap-2 sm:grid sm:grid-cols-2 xl:grid-cols-3">
-                        {documentRules.map((rule) => {
-                          const count = ruleProgress(rule, dossier.evidences);
-                          const selected = selectedRule?.key === rule.key;
-                          return (
-                            <button
-                              key={rule.key}
-                              type="button"
-                              aria-pressed={selected}
-                              disabled={
-                                (queueLocked && !selected) || attach.isPending
-                              }
-                              onClick={() => {
-                                setEvidenceType(rule.key);
-                                setEvidenceTitle("");
-                              }}
-                              className={cn(
-                                "min-h-20 rounded-xl border px-4 py-3 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600 disabled:cursor-not-allowed disabled:opacity-50",
-                                selected
-                                  ? "border-primary-600 bg-primary-50 text-primary-950"
-                                  : "border-[var(--theme-border)] bg-[var(--theme-surface)] hover:bg-[var(--theme-elevated)]",
-                              )}
-                            >
-                              <strong className="block text-sm">
-                                {rule.label}
-                              </strong>
-                              <span className="mt-1 block text-xs text-[var(--theme-muted)]">
-                                {rule.required ? "Bắt buộc" : "Tùy chọn"} ·{" "}
-                                {count}/{rule.maxCount} tệp
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
                     </fieldset>
                   ) : null}
                   {documentRules.length === 0 ? (
@@ -999,6 +1010,7 @@ export function DossierWorkspace({
                     </div>
                   </details>
                   <div>
+                    <p className="mb-2 text-sm font-bold">Thêm tài liệu</p>
                     <FileUploader
                       compact
                       key={selectedRule?.key ?? evidenceType}
@@ -1219,7 +1231,7 @@ export function DossierWorkspace({
                   {dossier.status === "DRAFT" && user?.isTestAccount ? (
                     <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4">
                       <label className="grid max-w-sm gap-2 text-sm font-semibold">
-                        Chế độ phí TEST
+                        Chế độ kiểm thử
                         <select
                           className="min-h-11 rounded-xl border border-amber-300 bg-white px-3"
                           onChange={(event) =>
@@ -1251,8 +1263,9 @@ export function DossierWorkspace({
                     >
                       {submissionFee.data?.feeAvailable === false ? (
                         <p className="font-semibold text-amber-700">
-                          {submissionFee.data.description} Vui lòng liên hệ quản
-                          trị viên trước khi nộp.
+                          {submissionFee.data.description} Hồ sơ nháp vẫn được
+                          lưu. Vui lòng thử lại sau khi Admin kích hoạt chính
+                          sách phí.
                         </p>
                       ) : submissionFee.data?.feeRequired ? (
                         <>

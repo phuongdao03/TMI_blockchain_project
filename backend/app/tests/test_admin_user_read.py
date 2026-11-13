@@ -58,6 +58,7 @@ def test_admin_user_list_is_filtered_stable_and_permission_protected(
             email="minh@example.com",
             password_hash=None,
             status=UserStatus.ACTIVE,
+            is_test_account=True,
         )
         an = User(
             email="an@example.com",
@@ -102,6 +103,7 @@ def test_admin_user_list_is_filtered_stable_and_permission_protected(
             assert rows[0].full_name == "Nguyen Minh"
             assert rows[0].providers == ("GOOGLE",)
             assert rows[0].roles == ("USER",)
+            assert rows[0].is_test_account is True
             assert "password" not in rows[0].model_dump()
 
             detail = await AdminUserService(session).detail(service_principal, minh.id)

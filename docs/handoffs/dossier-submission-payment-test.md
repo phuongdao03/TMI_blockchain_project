@@ -34,3 +34,22 @@
 ## Operations
 
 Apply migrations only through the normal release process after staging verification. Migration 0164 downgrades refuse to discard referral-code aliases or configured/issued level-2 commissions. Earlier downgrades refuse to remove used global policies, pending snapshots, or TEST-marked rows. Existing payment history is retained and classified as REAL by the migration default.
+
+## P0 follow-up implementation status — 2026-11-13
+
+- Local code supports explicit confirmation for a global submission-fee policy. The creating Admin can activate it alone after confirmation; other fee types retain separation of duties. The fee workspace presents the current policy first, then version history, with waivers and legacy transactions in expandable sections.
+- Admin user details return the server-side TEST marker. Admin → Người dùng offers a separate USER invitation for TEST accounts and explains that existing accounts are not reclassified. Details include role, activity/test status, and user-scoped audit history.
+- New manual payment issuance and waivers are limited to approved LEGACY dossiers. Missing global policy quotes now explain that the draft is retained and submission remains blocked.
+- Evidence type selection is one backend-driven dropdown at every viewport. Saved files include original name, MIME type, size, safety state, a signed-link view action, delete controls, and collapsed integrity comparison.
+- Focused frontend tests: 50 passed. Backend fee policy/submission tests: 17 passed; admin-user/audit tests: 9 passed; payment service/API tests: 35 passed. Frontend lint and direct `tsc --noEmit --incremental false` passed. OpenAPI generation exposes the activation request schema.
+- `npm run typecheck` could not complete because Next `typegen` was denied writes to `frontend/.next/types/routes.d.ts` and `frontend/tsconfig.json`. `npm run build` and Playwright E2E could not start because Windows denied writes to the configured Next dist directory; the default Playwright output directory was also unwritable. These are local filesystem failures, not assertion failures.
+- Local/staging DB credentials and runtime configuration were unavailable. Migrations 0161–0164 and their applied state were not checked against a database. The public site loaded read-only; `/admin/users` redirected to login, so authenticated deployed UI and all three end-to-end business journeys remain unverified.
+- All changes remain local and uncommitted. No database migration, real invitation, payment, production configuration change, or deployment was performed.
+
+## Current P0 verification — 2026-11-13
+
+- `npm run format:check`, frontend lint, backend Ruff lint, direct TypeScript (`tsc --noEmit --incremental false`), and backend mypy passed. Root tests: 10 passed. Full frontend suite: 1,083 passed across 248 files. Full backend suite: 1,367 passed, 3 skipped.
+- The first complete frontend run exposed an overly exact test text matcher; the matcher now checks the paragraph copy as a substring, its focused test passes, and the complete suite passes after that correction.
+- `npm run typecheck` remains blocked at Next type generation by Windows `EPERM` writes to `.next/types/routes.d.ts` and `tsconfig.json`. `npm run build` was blocked creating the configured Next build directory. Playwright could not start its Next dev server because Windows denied writes to the configured dist directory; its flows did not reach assertions.
+- No authenticated staging configuration or database credentials were available. Migration state and responsive browser journeys were not verified against staging. The public site was only inspected read-only; its admin route redirected to login.
+- No migration was applied, and no commit, real invitation, payment, production configuration change, or deployment occurred.

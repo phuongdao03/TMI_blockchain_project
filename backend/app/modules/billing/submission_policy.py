@@ -39,9 +39,10 @@ UNAVAILABLE_FEE_QUOTE = {
     "amountMinor": 0,
     "currency": "VND",
     "description": (
-        "Ch\u01b0a c\u00f3 ch\u00ednh s\u00e1ch ph\u00ed "
-        "\u0111\u01b0\u1ee3c ph\u00ea duy\u1ec7t cho lo\u1ea1i "
-        "h\u1ed3 s\u01a1 n\u00e0y."
+        "Ch\u01b0a c\u00f3 ch\u00ednh s\u00e1ch ph\u00ed n\u1ed9p "
+        "h\u1ed3 s\u01a1 chung \u0111ang c\u00f3 hi\u1ec7u l\u1ef1c. "
+        "B\u1ea3n nh\u00e1p v\u1eabn \u0111\u01b0\u1ee3c l\u01b0u; vui l\u00f2ng "
+        "th\u1eed l\u1ea1i sau khi Admin k\u00edch ho\u1ea1t ch\u00ednh s\u00e1ch."
     ),
     "policyId": None,
     "policyVersionNo": None,

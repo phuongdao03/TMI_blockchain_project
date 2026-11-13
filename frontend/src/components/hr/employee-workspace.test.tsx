@@ -33,6 +33,7 @@ beforeEach(() => {
         fullName: "Nguyễn Kiểm Duyệt",
         status: "ACTIVE",
         isEmailVerified: true,
+        isTestAccount: false,
         roles: ["MODERATOR"],
       },
     ],

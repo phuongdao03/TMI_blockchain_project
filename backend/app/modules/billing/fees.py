@@ -164,7 +164,13 @@ class FeePolicyService:
             await self._session.flush()
             return self._view(policy, now)
 
-    async def approve(self, policy_id: UUID, *, actor_user_id: UUID) -> FeePolicyView:
+    async def approve(
+        self,
+        policy_id: UUID,
+        *,
+        actor_user_id: UUID,
+        confirm_activation: bool = False,
+    ) -> FeePolicyView:
         now = self.current_time()
         async with self._session.begin():
             policy = await self._policy(policy_id)
@@ -172,7 +178,16 @@ class FeePolicyService:
             policy = await self._policy(policy_id, for_update=True)
             if policy.status is not FeePolicyStatus.DRAFT:
                 raise PriceCatalogConflictError("Only a draft policy can be approved.")
-            if policy.created_by_user_id == actor_user_id:
+            is_submission_policy = policy.fee_type == "DOSSIER_SUBMISSION"
+            if is_submission_policy and not confirm_activation:
+                raise PriceCatalogConflictError(
+                    "Admin confirmation is required to activate a submission "
+                    "fee policy.",
+                    code="FEE_POLICY_CONFIRMATION_REQUIRED",
+                )
+            if policy.created_by_user_id == actor_user_id and not (
+                is_submission_policy and confirm_activation
+            ):
                 raise PriceCatalogConflictError(
                     "A different approver must approve the fee policy."
                 )
@@ -228,19 +243,25 @@ class FeePolicyService:
             )
             policy.approved_by_user_id = actor_user_id
             policy.approved_at = now
+            approval_snapshot = self._snapshot(policy)
+            if is_submission_policy:
+                approval_snapshot["activationConfirmed"] = confirm_activation
+                approval_snapshot["activatedByCreator"] = (
+                    policy.created_by_user_id == actor_user_id
+                )
             self._event(
                 policy,
                 actor_user_id=actor_user_id,
                 event_type="APPROVED",
                 reason=policy.reason,
-                after=self._snapshot(policy),
+                after=approval_snapshot,
             )
             self._audit.record(
                 actor_user_id=actor_user_id,
                 action="billing.fee_policy.approved",
                 resource_type="fee_policy",
                 resource_id=str(policy.id),
-                after=self._snapshot(policy),
+                after=approval_snapshot,
             )
             await self._session.flush()
             return self._view(policy, now)

@@ -82,6 +82,9 @@ async def search_audit(
     resource_type: str | None = Query(
         default=None, alias="resourceType", max_length=64
     ),
+    resource_id: Annotated[
+        str | None, Query(alias="resourceId", max_length=128)
+    ] = None,
     created_from: Annotated[datetime | None, Query(alias="createdFrom")] = None,
     created_to: Annotated[datetime | None, Query(alias="createdTo")] = None,
     include_access_events: bool = Query(default=True, alias="includeAccessEvents"),
@@ -95,6 +98,7 @@ async def search_audit(
             actor_user_id=actor_user_id,
             action=action,
             resource_type=resource_type,
+            resource_id=resource_id,
             created_from=created_from,
             created_to=created_to,
             include_access_events=include_access_events,
@@ -114,6 +118,7 @@ async def search_audit(
                         actor_user_id,
                         action,
                         resource_type,
+                        resource_id,
                         created_from,
                         created_to,
                     )

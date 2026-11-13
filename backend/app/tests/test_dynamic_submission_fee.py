@@ -64,7 +64,11 @@ async def _install_policy(service, sessions, owner, dossier_id, *, amount_minor)
             ends_at=None,
             reason="Test approved policy",
         )
-        approved = await policies.approve(draft.id, actor_user_id=admin.id)
+        approved = await policies.approve(
+            draft.id,
+            actor_user_id=admin.id,
+            confirm_activation=True,
+        )
     return admin, dossier_type, approved
 
 
@@ -188,7 +192,11 @@ def test_stale_preview_requotes_without_changing_old_obligation_amount() -> None
                 ends_at=None,
                 reason="Scheduled rate change",
             )
-            second = await policies.approve(second_draft.id, actor_user_id=admin.id)
+            second = await policies.approve(
+                second_draft.id,
+                actor_user_id=admin.id,
+                confirm_activation=True,
+            )
         with pytest.raises(PriceCatalogConflictError) as stale:
             await service.submit_dossier(
                 principal,

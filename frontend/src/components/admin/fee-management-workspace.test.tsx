@@ -67,33 +67,48 @@ function renderWorkspace() {
 describe("FeeManagementWorkspace", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    auth.user.permissions = [
+      "billing.fees.read",
+      "billing.fees.policies.create",
+      "billing.fees.policies.approve",
+      "billing.fees.policies.cancel",
+      "billing.fees.waivers.request",
+      "billing.fees.waivers.approve",
+      "payments.read",
+      "payments.issue",
+      "payments.reconcile",
+    ];
     feeApi.listPolicies.mockResolvedValue([]);
     feeApi.listWaivers.mockResolvedValue([]);
     dossierApi.listTypes.mockResolvedValue([]);
   });
 
-  it("offers the four fee operations and keeps reconciliation separate", () => {
+  it("shows the current fee first and groups legacy transaction operations", () => {
     const { container } = renderWorkspace();
 
     expect(container.querySelector("main")).toBeNull();
-
-    expect(screen.getByRole("tab", { name: "Giao dịch" })).toBeTruthy();
-    expect(screen.getByRole("tab", { name: "Miễn giảm" })).toBeTruthy();
-    expect(screen.getByRole("tab", { name: "Chính sách" })).toBeTruthy();
-    expect(screen.getByRole("tab", { name: "Đối soát" })).toBeTruthy();
+    expect(screen.getByText("Chưa có mức phí hiệu lực")).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Thay đổi mức phí" }),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Xem lịch sử" })).toBeTruthy();
+    expect(screen.queryByRole("tablist")).toBeNull();
+    fireEvent.click(screen.getByText("Giao dịch và đối soát hồ sơ legacy"));
     expect(screen.getByText("Historial transactions")).toBeTruthy();
-
-    fireEvent.click(screen.getByRole("tab", { name: "Đối soát" }));
     expect(screen.getByText("Reconciliation queue")).toBeTruthy();
+    expect(
+      screen.getByText(/Yêu cầu thu phí thủ công chỉ dành cho hồ sơ legacy/),
+    ).toBeTruthy();
   });
 
   it("hides actions when the matching granular permission is absent", () => {
     auth.user.permissions = ["billing.fees.read"];
     renderWorkspace();
 
-    expect(screen.getByRole("tab", { name: "Chính sách" })).toBeTruthy();
-    expect(screen.queryByRole("tab", { name: "Giao dịch" })).toBeNull();
-    fireEvent.click(screen.getByRole("tab", { name: "Chính sách" }));
+    expect(screen.getByText("Lịch sử phiên bản phí chung")).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: "Thay đổi mức phí" }),
+    ).toBeNull();
     expect(screen.queryByRole("button", { name: "Tạo chính sách" })).toBeNull();
   });
 
@@ -101,16 +116,16 @@ describe("FeeManagementWorkspace", () => {
     auth.user.permissions = ["billing.fees.waivers.request"];
     renderWorkspace();
 
-    expect(screen.queryByRole("tab", { name: "Miễn giảm" })).toBeNull();
+    expect(screen.queryByText("Miễn phí hồ sơ thật")).toBeNull();
     expect(feeApi.listWaivers).not.toHaveBeenCalled();
-    expect(screen.queryByRole("tab", { name: "Chính sách" })).toBeNull();
+    expect(screen.queryByText("Lịch sử phiên bản phí chung")).toBeNull();
   });
 
   it("lets an authorized Admin grant a full submission waiver directly", async () => {
     auth.user.permissions = ["billing.fees.waivers.approve"];
     feeApi.grantSubmissionWaiver.mockResolvedValue({});
     renderWorkspace();
-    fireEvent.click(screen.getByRole("tab", { name: "Miễn giảm" }));
+    fireEvent.click(screen.getByText("Miễn phí hồ sơ thật"));
 
     fireEvent.change(screen.getByLabelText("Mã hồ sơ"), {
       target: { value: "dossier-1" },
@@ -125,6 +140,39 @@ describe("FeeManagementWorkspace", () => {
         dossierId: "dossier-1",
         reason: "Approved by Admin",
       }),
+    );
+  });
+
+  it("requires an explicit confirmation before a single Admin activates a draft", async () => {
+    const draft = {
+      id: "policy-1",
+      feeType: "DOSSIER_SUBMISSION",
+      dossierTypeId: null,
+      amountMinor: 5_000_000,
+      currency: "VND",
+      status: "DRAFT",
+      displayName: "Phí nộp hồ sơ",
+      reason: "Initial global submission fee",
+      versionNo: 1,
+      startsAt: "2026-11-13T00:00:00Z",
+      endsAt: null,
+      createdByUserId: "admin-1",
+      approvedByUserId: null,
+    };
+    feeApi.listPolicies.mockResolvedValue([draft]);
+    feeApi.approvePolicy.mockResolvedValue({ ...draft, status: "ACTIVE" });
+    renderWorkspace();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Xem lại" }));
+    expect(screen.getByText("Xem lại trước khi kích hoạt")).toBeTruthy();
+    const confirm = screen.getByRole("button", { name: "Xác nhận kích hoạt" });
+    expect(confirm).toHaveProperty("disabled", true);
+    fireEvent.click(screen.getByRole("checkbox"));
+    expect(confirm).toHaveProperty("disabled", false);
+    fireEvent.click(confirm);
+
+    await waitFor(() =>
+      expect(feeApi.approvePolicy).toHaveBeenCalledWith("policy-1", true),
     );
   });
 });

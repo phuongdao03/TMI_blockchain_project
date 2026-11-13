@@ -27,6 +27,7 @@ const applicantUser = {
   roles: ["USER"],
   accountType: "INDIVIDUAL_APPLICANT",
 };
+const testApplicantUser = { ...applicantUser, isTestAccount: true };
 const reviewerUser = {
   id: "f57912cc-714c-4ab5-9fd9-1c5b38cd902b",
   email: "reviewer@tinhhoaviet.org.vn",
@@ -3332,15 +3333,17 @@ const server = createServer(async (request, response) => {
           ? superAdminUser
           : sessionPersona === "reviewer"
             ? reviewerUser
-            : sessionPersona === "applicant"
-              ? applicantUser
-              : sessionPersona === "public"
-                ? {
-                    ...applicantUser,
-                    accountType: "PUBLIC_USER",
-                    roles: ["VIEWER"],
-                  }
-                : user,
+            : sessionPersona === "test-applicant"
+              ? testApplicantUser
+              : sessionPersona === "applicant"
+                ? applicantUser
+                : sessionPersona === "public"
+                  ? {
+                      ...applicantUser,
+                      accountType: "PUBLIC_USER",
+                      roles: ["VIEWER"],
+                    }
+                  : user,
       ),
     );
     return;

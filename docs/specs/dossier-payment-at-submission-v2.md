@@ -185,3 +185,29 @@ Tạo tài khoản applicant TEST riêng theo luồng Admin đã được ngư�
 - TEST skip/mock không tạo tiền thật hoặc external side effect; dữ liệu TEST bị loại khỏi public và thống kê production.
 - Miễn phí thật có quyết định và audit riêng; duplicate/replay không thu tiền hai lần.
 - Hồ sơ và giao dịch lịch sử không bị mất hoặc thu phí lại; test/build/migration cô lập đạt theo kế hoạch.
+
+## P0 follow-up: vận hành và trải nghiệm người dùng
+
+### Phạm vi
+
+- Cho một Admin tạo, xem lại, xác nhận rồi kích hoạt/lên lịch policy nộp hồ sơ chung; giữ xác nhận phía server và audit.
+- Đặt luồng mời tài khoản TEST riêng ngay trong Admin → Người dùng. Không chuyển tài khoản có lịch sử sang TEST; giữ role USER và marker do server đặt.
+- Giữ lựa chọn bỏ qua/mô phỏng trong bước kiểm tra của tài khoản TEST; USER thường không thấy và không thể gửi chế độ TEST.
+- Ẩn luồng yêu cầu thu phí sau duyệt khỏi hồ sơ DYNAMIC; giữ API và xử lý các order LEGACY theo snapshot ban đầu.
+- Tổ chức lại khu vực tài liệu để ưu tiên loại bắt buộc, tiến trình tải, tên file, kết quả an toàn và thao tác thay/xóa; tiếp tục dùng quy tắc tài liệu và kiểm tra integrity từ backend.
+- Làm gọn workspace phí và kiểm tra responsive, theme, lỗi/đang tải/thành công trên các kích thước được yêu cầu.
+
+### Lát cắt thực hiện
+
+1. **Policy activation:** thêm payload xác nhận; cho phép cùng Admin kích hoạt policy submission global, nhưng giữ separation-of-duties cho fee type khác. Hiển thị bước xem lại/xác nhận và trạng thái ACTIVE/SCHEDULED.
+2. **TEST accounts:** trả marker trong AdminUserData; đưa lời mời TEST riêng vào màn hình người dùng; hiển thị vai trò/trạng thái/marker và lịch sử audit theo quyền hiện có. Không sửa marker của tài khoản đã tồn tại.
+3. **Submission/payment:** giữ fail-closed nếu thiếu policy, sửa thông báo thành ngữ cảnh phí chung, và giới hạn thao tác thu phí legacy vào hồ sơ LEGACY.
+4. **Evidence UX:** tinh gọn bộ chọn loại tài liệu và danh sách tệp, thể hiện quy tắc bắt buộc/tùy chọn cùng trạng thái upload/safety; không đổi quy tắc, hash, hoặc object đã lưu.
+5. **Verification:** chạy test API/service và component, E2E mock trên browser tại 320/375/390/768/1024/1440px, format/lint/typecheck/build. Chỉ dùng SQLite/test fixtures cô lập.
+
+### Ranh giới follow-up
+
+- Không chạy migration, tạo policy, thanh toán, gửi lời mời thật, hay deploy trên production.
+- Không cho phép client đặt `is_test_account`; không chuyển dữ liệu tài chính/hồ sơ cũ thành TEST.
+- Không thu phí khi quote lỗi hoặc chưa có policy hiệu lực; không sửa amount/snapshot cũ.
+- Không gọi PayOS production hoặc ghi blockchain/publication trong kiểm thử.
