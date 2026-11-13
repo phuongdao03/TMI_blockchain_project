@@ -137,6 +137,20 @@ test("TEST applicant skips the fee without starting a payment", async ({
   await submitButton.evaluate((button) =>
     button.scrollIntoView({ block: "center" }),
   );
+  await submitButton.evaluate((button) => {
+    const navigation = document.querySelector(".site-mobile-navigation");
+    const scrollport = document.scrollingElement;
+    if (!navigation || !scrollport) return;
+
+    const safeBottom = navigation.getBoundingClientRect().top - 16;
+    const overlap = button.getBoundingClientRect().bottom - safeBottom;
+    if (overlap <= 0) return;
+
+    const previousScrollBehavior = scrollport.style.scrollBehavior;
+    scrollport.style.scrollBehavior = "auto";
+    scrollport.scrollTop += overlap;
+    scrollport.style.scrollBehavior = previousScrollBehavior;
+  });
   await submitButton.click();
   await expect(page.getByText("Hồ sơ đã được gửi thành công")).toBeVisible();
   expect(paymentRequests).toBe(0);

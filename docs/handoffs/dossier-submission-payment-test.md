@@ -61,5 +61,5 @@ Apply migrations only through the normal release process after staging verificat
 
 ## E2E mobile follow-up — 2026-11-13
 
-- The next CI run passed the previous fixes and exposed one mobile TEST-submission click intercepted by the fixed bottom navigation. The E2E now centers the submit action in the viewport before a normal click.
-- The mobile TEST-submission spec passed five repeated runs locally in CI retry mode. Full E2E was not rerun locally.
+- CI run #439 passed the previous fixes and exposed a mobile TEST-submission click intercepted by the fixed bottom navigation. Centering alone did not prevent the overlap in Linux Chrome.
+- The E2E now checks the navigation's top edge and scrolls the button above it when needed, keeping a normal pointer click. The focused mobile spec passed locally with `CI=true`; the full matrix was not rerun locally.
