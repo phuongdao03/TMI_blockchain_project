@@ -37,6 +37,7 @@ def upgrade() -> None:
             ["id"],
             ondelete="SET NULL",
         )
+    _restore_sqlite_email_nocase_index()
 
 
 def downgrade() -> None:
@@ -47,3 +48,12 @@ def downgrade() -> None:
         batch.drop_column("submission_fee_test_exemption_changed_by_user_id")
         batch.drop_column("submission_fee_test_exemption_changed_at")
         batch.drop_column("submission_fee_test_exemption")
+    _restore_sqlite_email_nocase_index()
+
+
+def _restore_sqlite_email_nocase_index() -> None:
+    if op.get_bind().dialect.name == "sqlite":
+        op.execute("DROP INDEX IF EXISTS ux_users_email_nocase")
+        op.execute(
+            "CREATE UNIQUE INDEX ux_users_email_nocase ON users(email COLLATE NOCASE)"
+        )

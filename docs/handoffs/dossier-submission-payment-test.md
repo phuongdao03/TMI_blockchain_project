@@ -99,5 +99,18 @@ Apply migrations only through the normal release process after staging verificat
 - Root `format:check` passes after restoring the test-specific entries that
   Next.js generated in `frontend/tsconfig.json`. All changed frontend files pass
   Prettier, and backend Ruff format passes.
-- Changes are committed locally only. No production migration, deployment, real
-  invitation, payment, or push was performed.
+- The implementation was committed as `3d1184fa` and pushed on 2026-11-14.
+  No production migration, deployment, real invitation, or payment was made.
+
+## CI follow-up for #443 - 2026-11-14
+
+- The SQLite `users` batch rebuild in migration 0165 rewrote the custom email
+  index without its `NOCASE` collation. Migration 0165 now drops and recreates
+  that index on upgrade and downgrade; the auth schema migration test verifies
+  that mixed-case duplicate emails are rejected.
+- The admin-fees E2E expected the old draft-and-schedule flow. It now verifies
+  the immediate submission-fee endpoint and the activated fee in the workspace.
+- Local checks: auth schema and submission-fee migration tests passed 2/2;
+  admin-fees E2E passed on desktop and mobile 2/2. CI run #443's two retried
+  flaky tests passed; its only blockers were the migration and E2E failures
+  above. Full CI rerun is pending.

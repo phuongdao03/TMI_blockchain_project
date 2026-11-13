@@ -128,6 +128,10 @@ def test_auth_migration_upgrades_and_downgrades(tmp_path: Path) -> None:
                     "SELECT name FROM sqlite_master WHERE type = 'table'"
                 )
             }
+            email_index = connection.execute(
+                "SELECT sql FROM sqlite_master "
+                "WHERE type = 'index' AND name = 'ux_users_email_nocase'"
+            ).fetchone()
             connection.execute(
                 """
                 INSERT INTO users (id, email, password_hash, status)
@@ -144,6 +148,7 @@ def test_auth_migration_upgrades_and_downgrades(tmp_path: Path) -> None:
 
         assert AUTH_TABLES <= tables
         assert OUTBOX_TABLE in tables
+        assert email_index is not None
         with (
             sqlite3.connect(database_path) as connection,
             pytest.raises(sqlite3.IntegrityError),
