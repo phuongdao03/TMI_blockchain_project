@@ -118,6 +118,9 @@ export function AdminUserWorkspace() {
   );
   const [target, setTarget] = useState<AdminUser | null>(null);
   const [detailUser, setDetailUser] = useState<AdminUser | null>(null);
+  const [pendingExemptionChange, setPendingExemptionChange] = useState<
+    boolean | null
+  >(null);
   const [testApplicantEmail, setTestApplicantEmail] = useState("");
   const [createdTestInvitation, setCreatedTestInvitation] =
     useState<StaffInvitation | null>(null);
@@ -188,6 +191,28 @@ export function AdminUserWorkspace() {
       void queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
     },
   });
+  const updateSubmissionFeeTestExemption = useMutation({
+    mutationFn: (enabled: boolean) => {
+      if (!detailUser) throw new Error("Missing user exemption target");
+      return adminUsersApi.setSubmissionFeeTestExemption(
+        detailUser.id,
+        enabled,
+      );
+    },
+    onSuccess: (updatedUser) => {
+      queryClient.setQueryData(["admin", "user", updatedUser.id], updatedUser);
+      void queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+      void queryClient.invalidateQueries({
+        queryKey: ["admin", "audit", "user", updatedUser.id],
+      });
+      setPendingExemptionChange(null);
+      setFeedback(
+        updatedUser.submissionFeeTestExemption
+          ? "Đã bật quyền miễn phí nộp hồ sơ kiểm thử."
+          : "Đã tắt quyền miễn phí nộp hồ sơ kiểm thử.",
+      );
+    },
+  });
   const rows = users.data?.data ?? [];
   const total = users.data?.meta.total ?? 0;
   const pageCount = Math.max(1, Math.ceil(total / 20));
@@ -229,55 +254,56 @@ export function AdminUserWorkspace() {
       </header>
 
       {canManageTestAccounts ? (
-        <section className="grid gap-4 rounded-2xl border border-amber-300/70 bg-amber-500/5 p-4 sm:p-5 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.8fr)] lg:items-center">
-          <div className="min-w-0">
-            <h2 className="text-base font-bold text-[var(--theme-text)]">
-              Tài khoản kiểm thử
-            </h2>
-            <p className="mt-1 text-sm leading-6 text-[var(--theme-muted)]">
-              Mời tài khoản USER TEST riêng. Hệ thống gắn dấu TEST phía máy chủ
-              khi người dùng chấp nhận; tài khoản hiện có không thể chuyển loại.
+        <details className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4">
+          <summary className="cursor-pointer text-sm font-semibold text-[var(--theme-muted)]">
+            Mời tài khoản TEST mới (tùy chọn)
+          </summary>
+          <div className="mt-3 space-y-3">
+            <p className="text-sm leading-6 text-[var(--theme-muted)]">
+              Dùng cho tài khoản chưa đăng ký. Để miễn phí nộp hồ sơ cho tài
+              khoản hiện có, hãy mở chi tiết tài khoản trong danh sách.
             </p>
+            <form
+              className="flex flex-col gap-2 sm:flex-row sm:items-end"
+              onSubmit={submitTestInvitation}
+            >
+              <label className="min-w-0 flex-1 text-sm font-semibold text-[var(--theme-text)]">
+                Email mới
+                <input
+                  aria-label="Email tài khoản TEST mới"
+                  className={`${fieldClass} mt-1.5 w-full`}
+                  onChange={(event) =>
+                    setTestApplicantEmail(event.target.value)
+                  }
+                  placeholder="tester@example.com"
+                  required
+                  type="email"
+                  value={testApplicantEmail}
+                />
+              </label>
+              <button
+                className="min-h-11 rounded-xl bg-[var(--theme-text)] px-4 text-sm font-bold text-[var(--theme-surface)] disabled:opacity-50 sm:shrink-0"
+                disabled={createTestApplicant.isPending}
+                type="submit"
+              >
+                {createTestApplicant.isPending
+                  ? "Đang gửi…"
+                  : "Gửi lời mời TEST"}
+              </button>
+            </form>
+            {createTestApplicant.isError ? (
+              <p className="text-sm font-medium text-red-700" role="alert">
+                {testInvitationErrorMessage(createTestApplicant.error)}
+              </p>
+            ) : null}
+            {createdTestInvitation ? (
+              <p className="text-sm text-emerald-800" role="status">
+                Đã gửi lời mời TEST đến {createdTestInvitation.email}. Trạng
+                thái: {createdTestInvitation.status}. Hệ thống đã ghi nhật ký.
+              </p>
+            ) : null}
           </div>
-          <form
-            className="flex flex-col gap-2 sm:flex-row"
-            onSubmit={submitTestInvitation}
-          >
-            <label className="min-w-0 flex-1 text-sm font-semibold text-[var(--theme-text)]">
-              Email mới
-              <input
-                aria-label="Email tài khoản TEST mới"
-                className={`${fieldClass} mt-1.5 w-full`}
-                onChange={(event) => setTestApplicantEmail(event.target.value)}
-                placeholder="tester@example.com"
-                required
-                type="email"
-                value={testApplicantEmail}
-              />
-            </label>
-            <button
-              className="min-h-11 self-end rounded-xl bg-[var(--theme-text)] px-4 text-sm font-bold text-[var(--theme-surface)] disabled:opacity-50 sm:shrink-0"
-              disabled={createTestApplicant.isPending}
-              type="submit"
-            >
-              {createTestApplicant.isPending ? "Đang gửi…" : "Gửi lời mời TEST"}
-            </button>
-          </form>
-          {createTestApplicant.isError ? (
-            <p
-              className="text-sm font-medium text-red-700 lg:col-span-2"
-              role="alert"
-            >
-              {testInvitationErrorMessage(createTestApplicant.error)}
-            </p>
-          ) : null}
-          {createdTestInvitation ? (
-            <p className="text-sm text-emerald-800 lg:col-span-2" role="status">
-              Đã gửi lời mời TEST đến {createdTestInvitation.email}. Trạng thái:{" "}
-              {createdTestInvitation.status}. Hệ thống đã ghi nhật ký thao tác.
-            </p>
-          ) : null}
-        </section>
+        </details>
       ) : null}
 
       <form
@@ -421,6 +447,11 @@ export function AdminUserWorkspace() {
                           Tài khoản TEST
                         </span>
                       ) : null}
+                      {user.submissionFeeTestExemption ? (
+                        <span className="mt-1 inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-800">
+                          Miễn phí kiểm thử
+                        </span>
+                      ) : null}
                       <p className="mt-1 text-neutral-600">{user.email}</p>
                     </td>
                     <td className="px-5 py-4">
@@ -466,6 +497,11 @@ export function AdminUserWorkspace() {
                     {user.isTestAccount ? (
                       <span className="mt-1 inline-flex rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-bold text-amber-800">
                         Tài khoản TEST
+                      </span>
+                    ) : null}
+                    {user.submissionFeeTestExemption ? (
+                      <span className="mt-1 inline-flex rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-bold text-emerald-800">
+                        Miễn phí kiểm thử
                       </span>
                     ) : null}
                     <p className="mt-1 truncate text-sm text-neutral-600">
@@ -563,7 +599,10 @@ export function AdminUserWorkspace() {
               <button
                 aria-label="Đóng chi tiết"
                 className="grid size-11 shrink-0 place-items-center rounded-xl border border-[var(--theme-border)] font-bold"
-                onClick={() => setDetailUser(null)}
+                onClick={() => {
+                  setPendingExemptionChange(null);
+                  setDetailUser(null);
+                }}
                 type="button"
               >
                 ×
@@ -629,9 +668,115 @@ export function AdminUserWorkspace() {
                 </dl>
                 <p className="rounded-xl border border-amber-300/70 bg-amber-500/5 p-3 text-sm leading-6">
                   {displayedUser.isTestAccount
-                    ? "Đây là tài khoản kiểm thử riêng. Hồ sơ TEST không tạo thanh toán, doanh thu hoặc công bố thật."
-                    : "Tài khoản hiện có không thể chuyển sang TEST. Hãy tạo tài khoản kiểm thử riêng để bảo toàn lịch sử thật."}
+                    ? "Tài khoản này có cờ TEST riêng. Quyền miễn phí nộp bên dưới chỉ áp dụng cho phí nộp hồ sơ."
+                    : "Quyền miễn phí nộp bên dưới không đổi phân loại tài khoản, lịch sử hoặc thao tác ví."}
                 </p>
+                {canManageTestAccounts &&
+                displayedUser.roles.length === 1 &&
+                displayedUser.roles[0] === "USER" ? (
+                  <section
+                    aria-labelledby="submission-fee-test-exemption-title"
+                    className="space-y-3 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-elevated)] p-4"
+                  >
+                    <div>
+                      <h3
+                        className="font-bold"
+                        id="submission-fee-test-exemption-title"
+                      >
+                        Miễn phí nộp hồ sơ kiểm thử
+                      </h3>
+                      <p className="mt-1 text-sm leading-6 text-[var(--theme-muted)]">
+                        Chỉ miễn phí nộp hồ sơ mới. Không cấp vai trò, không đổi
+                        cờ TEST và không miễn phí dịch vụ khác.
+                      </p>
+                    </div>
+                    <p className="text-sm font-semibold">
+                      {displayedUser.submissionFeeTestExemption
+                        ? "Đang bật"
+                        : "Đang tắt"}
+                    </p>
+                    {displayedUser.submissionFeeTestExemptionChangedAt ? (
+                      <p className="break-all text-xs text-[var(--theme-muted)]">
+                        Cập nhật{" "}
+                        {formatDate(
+                          displayedUser.submissionFeeTestExemptionChangedAt,
+                        )}
+                        {displayedUser.submissionFeeTestExemptionChangedByUserId
+                          ? ` · người thực hiện ${displayedUser.submissionFeeTestExemptionChangedByUserId}`
+                          : ""}
+                      </p>
+                    ) : null}
+                    <button
+                      className="min-h-11 w-full rounded-xl border border-[var(--theme-border)] px-4 text-sm font-bold sm:w-auto"
+                      disabled={
+                        updateSubmissionFeeTestExemption.isPending ||
+                        (displayedUser.status !== "ACTIVE" &&
+                          !displayedUser.submissionFeeTestExemption)
+                      }
+                      onClick={() =>
+                        setPendingExemptionChange(
+                          !displayedUser.submissionFeeTestExemption,
+                        )
+                      }
+                      type="button"
+                    >
+                      {updateSubmissionFeeTestExemption.isPending
+                        ? "Đang cập nhật…"
+                        : displayedUser.submissionFeeTestExemption
+                          ? "Tắt kiểm thử miễn phí"
+                          : "Bật kiểm thử miễn phí"}
+                    </button>
+                    {updateSubmissionFeeTestExemption.error ? (
+                      <p className="text-sm text-red-700" role="alert">
+                        Không thể cập nhật quyền miễn phí nộp. Hãy tải lại tài
+                        khoản và thử lại.
+                      </p>
+                    ) : null}
+                  </section>
+                ) : null}
+                {pendingExemptionChange !== null ? (
+                  <section
+                    aria-labelledby="confirm-test-exemption-title"
+                    className="space-y-3 rounded-xl border border-primary-300 bg-primary-50 p-4 text-primary-950"
+                    role="group"
+                    aria-label="Xác nhận thay đổi quyền miễn phí kiểm thử"
+                  >
+                    <h3 className="font-bold" id="confirm-test-exemption-title">
+                      {pendingExemptionChange
+                        ? "Bật miễn phí kiểm thử?"
+                        : "Tắt miễn phí kiểm thử?"}
+                    </h3>
+                    <p className="text-sm leading-6">
+                      {pendingExemptionChange
+                        ? "Tài khoản này sẽ được miễn phí khi nộp hồ sơ để phục vụ kiểm thử. Các giao dịch và hồ sơ đã phát sinh trước đó không bị thay đổi."
+                        : "Các lần nộp hồ sơ mới sẽ áp dụng mức phí chung. Hồ sơ và giao dịch đã phát sinh không bị thay đổi."}
+                    </p>
+                    <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                      <button
+                        className="min-h-11 rounded-xl border border-primary-300 px-4 text-sm font-bold"
+                        disabled={updateSubmissionFeeTestExemption.isPending}
+                        onClick={() => setPendingExemptionChange(null)}
+                        type="button"
+                      >
+                        Hủy
+                      </button>
+                      <button
+                        className="min-h-11 rounded-xl bg-primary-700 px-4 text-sm font-bold text-white disabled:opacity-50"
+                        disabled={updateSubmissionFeeTestExemption.isPending}
+                        onClick={() =>
+                          updateSubmissionFeeTestExemption.mutate(
+                            pendingExemptionChange,
+                          )
+                        }
+                        type="button"
+                      >
+                        {updateSubmissionFeeTestExemption.isPending
+                          ? "Đang cập nhật…"
+                          : "Xác nhận"}
+                      </button>
+                    </div>
+                  </section>
+                ) : null}
                 <section aria-labelledby="user-history-title">
                   <h3 className="font-bold" id="user-history-title">
                     Nhật ký thay đổi
@@ -655,7 +800,10 @@ export function AdminUserWorkspace() {
                           <p className="text-sm font-semibold">
                             {entry.action === "admin.user.status_changed"
                               ? "Cập nhật trạng thái tài khoản"
-                              : entry.action}
+                              : entry.action ===
+                                  "admin.user.submission_fee_test_exemption_changed"
+                                ? "Cập nhật quyền miễn phí nộp hồ sơ kiểm thử"
+                                : entry.action}
                           </p>
                           <p className="mt-1 text-xs text-[var(--theme-muted)]">
                             {formatDate(entry.createdAt)} · {auditReason(entry)}

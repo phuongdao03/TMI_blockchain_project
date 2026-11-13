@@ -33,6 +33,12 @@ interface FileUploaderProps {
   compact?: boolean;
   constraints?: MediaFileConstraints;
   disabled?: boolean;
+  existingFiles?: readonly {
+    filename: string | null | undefined;
+    bytes: number;
+    mimeType: string;
+  }[];
+  idleMessage?: string;
   label: string;
   maxFiles?: number;
   multiple?: boolean;
@@ -82,6 +88,7 @@ function overallStatus(
   status: UploadStatus,
   count: number,
   completedCount: number,
+  idleMessage?: string,
 ): string {
   if (status === "complete") {
     return completedCount === 1
@@ -91,7 +98,7 @@ function overallStatus(
   if (status === "failed") {
     return "Có tệp chưa tải thành công. Bạn có thể thử lại hoặc xóa tệp đó.";
   }
-  if (status === "idle") return "Chưa chọn tệp.";
+  if (status === "idle") return idleMessage ?? "Chưa chọn tệp.";
   if (count > 0 && status === "selected") {
     return `${count} tệp · Sẵn sàng tải lên.`;
   }
@@ -103,6 +110,8 @@ export function FileUploader({
   compact = false,
   constraints,
   disabled = false,
+  existingFiles,
+  idleMessage,
   label,
   maxFiles,
   multiple = false,
@@ -136,6 +145,7 @@ export function FileUploader({
     cleanupCompletedOnRemove,
     constraints,
     disabled,
+    existingFiles,
     maxFiles,
     onComplete,
     purpose,
@@ -407,7 +417,7 @@ export function FileUploader({
           ) : null}
           {activeItem
             ? itemStatus(activeItem)
-            : overallStatus(status, items.length, completedCount)}
+            : overallStatus(status, items.length, completedCount, idleMessage)}
         </p>
 
         {activeItem?.status === "inspecting" ? (

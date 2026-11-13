@@ -114,7 +114,7 @@ describe("DossierWorkspace", () => {
     await user.click(screen.getByRole("button", { name: /Tài liệu/ }));
 
     expect(await screen.findByText("quyen-su-dung.pdf")).toBeDefined();
-    expect(screen.getByText("Đã tải lên · đã kiểm tra an toàn")).toBeDefined();
+    expect(screen.getByText("Đã tải lên và kiểm tra an toàn")).toBeDefined();
     expect(screen.getByLabelText("Loại tài liệu cần thêm")).toBeDefined();
     expect(screen.getByRole("button", { name: "Xem tệp" })).toBeDefined();
     await user.click(screen.getByRole("button", { name: "Xem tệp" }));
@@ -171,7 +171,7 @@ describe("DossierWorkspace", () => {
       "disabled",
       false,
     );
-    expect(screen.getByText("Bằng chứng về quyền sử dụng")).toBeDefined();
+    expect(screen.getByText(/Bằng chứng về quyền sử dụng/)).toBeDefined();
   });
 
   it("keeps a draft unsubmitted until an active global fee policy exists", async () => {
@@ -207,12 +207,25 @@ describe("DossierWorkspace", () => {
     );
   });
 
-  it("shows the default TEST skip choice and submits without a fee version", async () => {
+  it("uses the current scoped exemption quote without a test payment mode", async () => {
     const user = userEvent.setup();
     const testDossier = { ...dossier, claims: [] };
     api.get.mockResolvedValue(testDossier);
     api.versions.mockResolvedValue([]);
     api.timeline.mockResolvedValue([]);
+    api.submissionFee.mockResolvedValue({
+      feeRequired: false,
+      feeAvailable: true,
+      amountMinor: 0,
+      currency: "VND",
+      description: "Phí nộp hồ sơ được miễn theo quyền kiểm thử.",
+      policyId: "policy-1",
+      policyVersionNo: 1,
+      feeWaived: true,
+      grossAmountMinor: 5_000_000,
+      waiverAmountMinor: 5_000_000,
+      waiverReason: "TEST_SUBMISSION_FEE_EXEMPTION",
+    });
     api.submit.mockResolvedValue({
       dossier: { ...testDossier, status: "SUBMITTED", canEdit: false },
       version: { id: "version-test", submittedAt: "2026-07-31T09:00:00Z" },
@@ -225,11 +238,11 @@ describe("DossierWorkspace", () => {
       >
         <AuthUserProvider
           user={{
-            id: "test-user",
-            email: "test@example.test",
+            id: "existing-user",
+            email: "existing@example.test",
             roles: ["USER"],
             accountType: "INDIVIDUAL_APPLICANT",
-            isTestAccount: true,
+            isTestAccount: false,
           }}
         >
           <DossierWorkspace dossierId={dossier.id} />
@@ -239,12 +252,14 @@ describe("DossierWorkspace", () => {
 
     await screen.findByRole("heading", { level: 1, name: dossier.title });
     await user.click(screen.getByRole("button", { name: /Kiểm tra & nộp/ }));
-    expect(screen.getByText("Chế độ kiểm thử")).toBeDefined();
-    const mode = screen.getByRole("combobox", { name: "Chế độ kiểm thử" });
-    expect(mode).toHaveProperty("value", "SKIP");
     expect(
-      screen.getByText(/không trừ ví, không gọi cổng thanh toán thật/),
+      screen.getByText("Phí nộp hồ sơ được miễn theo quyền kiểm thử."),
     ).toBeDefined();
+    expect(screen.getByText("Cần thanh toán")).toBeDefined();
+    expect(screen.getByText("0 VND")).toBeDefined();
+    expect(
+      screen.queryByRole("combobox", { name: "Chế độ kiểm thử" }),
+    ).toBeNull();
     await user.click(screen.getByRole("button", { name: "Nộp hồ sơ" }));
 
     await waitFor(() =>
@@ -252,7 +267,7 @@ describe("DossierWorkspace", () => {
         dossier.id,
         expect.any(String),
         null,
-        "SKIP",
+        true,
       ),
     );
   });
@@ -366,7 +381,7 @@ describe("DossierWorkspace", () => {
     );
 
     await user.click(screen.getByRole("button", { name: /Kiểm tra & nộp/ }));
-    expect(screen.getByText("Bằng chứng về quyền sử dụng")).toBeDefined();
+    expect(screen.getByText(/Bằng chứng về quyền sử dụng/)).toBeDefined();
     await user.click(screen.getByRole("button", { name: "Nộp hồ sơ" }));
     expect(api.submit.mock.calls[0]?.[0]).toBe(dossier.id);
     expect(api.submit.mock.calls[0]?.[1]).toEqual(expect.any(String));
@@ -659,7 +674,7 @@ describe("DossierWorkspace", () => {
     await user.selectOptions(ruleSelect, "OTHER");
     expect(ruleSelect).toHaveProperty("value", "OTHER");
     await user.upload(
-      screen.getByLabelText("Chọn tài liệu khác"),
+      screen.getByLabelText("Chọn tệp cần thêm"),
       new File(["proof"], "proof.pdf", { type: "application/pdf" }),
     );
     expect(ruleSelect.hasAttribute("disabled")).toBe(true);

@@ -158,6 +158,10 @@ class SubmissionFeeQuoteData(DossierSchema):
     description: str
     policy_id: UUID | None = None
     policy_version_no: int | None = None
+    fee_waived: bool = False
+    gross_amount_minor: int | None = None
+    waiver_amount_minor: int | None = None
+    waiver_reason: str | None = None
 
 
 class DossierTypeVersionData(DossierSchema):

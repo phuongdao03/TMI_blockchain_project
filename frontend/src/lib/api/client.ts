@@ -1563,6 +1563,12 @@ export const adminUsersApi = {
       { method: "PATCH", body: JSON.stringify(input) },
     );
   },
+  setSubmissionFeeTestExemption(userId: string, enabled: boolean) {
+    return request<AdminUser>(
+      `/admin/users/${encodeURIComponent(userId)}/submission-fee-test-exemption`,
+      { method: "PATCH", body: JSON.stringify({ enabled }) },
+    );
+  },
 };
 
 export const adminAnnouncementsApi = {
@@ -1825,6 +1831,10 @@ export const dossierApi = {
       description: string;
       policyId: string | null;
       policyVersionNo: number | null;
+      feeWaived: boolean;
+      grossAmountMinor: number | null;
+      waiverAmountMinor: number | null;
+      waiverReason: string | null;
     }>(`/dossiers/${encodeURIComponent(dossierId)}/submission-fee`);
   },
   retrySubmissionPayment(dossierId: string, key: string) {
@@ -1901,7 +1911,7 @@ export const dossierApi = {
     dossierId: string,
     idempotencyKey: string,
     acceptedFeePolicyVersion?: number | null,
-    testPaymentMode?: "SKIP" | "MOCK",
+    expectedFeeTestExemption = false,
   ) {
     return request<DossierSubmission>(`/dossiers/${dossierId}/submit`, {
       method: "POST",
@@ -1910,9 +1920,7 @@ export const dossierApi = {
         ...(acceptedFeePolicyVersion == null
           ? {}
           : { "X-Fee-Policy-Version": String(acceptedFeePolicyVersion) }),
-        ...(testPaymentMode == null
-          ? {}
-          : { "X-Test-Payment-Mode": testPaymentMode }),
+        "X-Submission-Fee-Test-Exemption": String(expectedFeeTestExemption),
       },
     });
   },
@@ -2250,6 +2258,12 @@ export const feeApi = {
   listPolicies() {
     return request<import("./types").AdminFeePolicy[]>(
       "/admin/fee-policies?limit=100",
+    );
+  },
+  applySubmissionFee(input: { amountMinor: number }) {
+    return request<import("./types").AdminFeePolicy>(
+      "/admin/fee-policies/submission/current",
+      { method: "PUT", body: JSON.stringify(input) },
     );
   },
   createPolicy(input: {

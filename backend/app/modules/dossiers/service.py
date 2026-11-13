@@ -3,7 +3,7 @@ import re
 from collections.abc import Callable, Mapping
 from copy import deepcopy
 from datetime import UTC, datetime
-from typing import Any, Literal, cast
+from typing import Any, cast
 from uuid import UUID, uuid4
 
 from sqlalchemy import select
@@ -16,6 +16,7 @@ from app.modules.auth.models import AccountType, User
 from app.modules.auth.repositories import OutboxRepository
 from app.modules.auth.security import OutboxPayloadCipher
 from app.modules.auth.session_service import AuthPrincipal
+from app.modules.billing.errors import PriceCatalogConflictError
 from app.modules.billing.submission_policy import SubmissionFeeService
 from app.modules.dossiers.canonical import (
     content_fingerprint,
@@ -911,14 +912,14 @@ class DossierService:
         *,
         idempotency_key: str,
         accepted_fee_policy_version: int | None = None,
-        test_payment_mode: Literal["SKIP", "MOCK"] | None = None,
+        expected_fee_test_exemption: bool | None = None,
     ) -> SubmissionView:
         return await self._submit(
             principal,
             dossier_id,
             idempotency_key=idempotency_key,
             accepted_fee_policy_version=accepted_fee_policy_version,
-            test_payment_mode=test_payment_mode,
+            expected_fee_test_exemption=expected_fee_test_exemption,
             expected_status=DossierStatus.DRAFT,
             reason_code="APPLICANT_SUBMIT",
         )
@@ -936,7 +937,7 @@ class DossierService:
             dossier_id,
             idempotency_key=idempotency_key,
             accepted_fee_policy_version=accepted_fee_policy_version,
-            test_payment_mode=None,
+            expected_fee_test_exemption=None,
             expected_status=DossierStatus.NEEDS_SUPPLEMENT,
             reason_code="APPLICANT_RESUBMIT",
         )
@@ -968,7 +969,7 @@ class DossierService:
         *,
         idempotency_key: str,
         accepted_fee_policy_version: int | None,
-        test_payment_mode: Literal["SKIP", "MOCK"] | None,
+        expected_fee_test_exemption: bool | None,
         expected_status: DossierStatus,
         reason_code: str,
     ) -> SubmissionView:
@@ -1004,6 +1005,26 @@ class DossierService:
                     raise DossierInvalidStateError(
                         f"Dossier must be {expected_status.value} for this action."
                     )
+                fee_test_exemption = False
+                if expected_status is DossierStatus.DRAFT:
+                    fee_owner = await self._session.scalar(
+                        select(User)
+                        .where(User.id == dossier.owner_user_id)
+                        .with_for_update()
+                        .execution_options(populate_existing=True)
+                    )
+                    if fee_owner is None:
+                        raise DossierForbiddenError()
+                    fee_test_exemption = fee_owner.submission_fee_test_exemption
+                    if (
+                        expected_fee_test_exemption is not None
+                        and expected_fee_test_exemption != fee_test_exemption
+                    ):
+                        raise PriceCatalogConflictError(
+                            "The test fee exemption changed. "
+                            "Review the current fee quote.",
+                            code="FEE_QUOTE_STALE",
+                        )
                 category = await self._repository.get_category(dossier.category_id)
                 if category is None:
                     raise DossierValidationError("Dossier category is not active.")
@@ -1086,35 +1107,25 @@ class DossierService:
                 for evidence, _ in evidence_rows:
                     evidence.dossier_version_id = version.id
                 dossier.current_version_no = version_no
-                if test_payment_mode is not None and not principal.is_test_account:
-                    raise DossierForbiddenError()
-                if principal.is_test_account and expected_status is DossierStatus.DRAFT:
-                    mode = test_payment_mode or "SKIP"
-                    if mode == "SKIP":
-                        dossier.submission_fee_required = False
-                        dossier.submission_fee_snapshot = {
-                            "feeRequired": False,
-                            "feeAvailable": True,
-                            "amountMinor": 0,
-                            "currency": "VND",
-                            "description": "Phí đã được bỏ qua trong chế độ TEST.",
-                            "testPaymentMode": "SKIP",
-                        }
-                        order = None
-                    else:
-                        order = await self._submission_fees().reserve(
+                if fee_test_exemption and expected_status is DossierStatus.DRAFT:
+                    waiver_snapshot = (
+                        await self._submission_fees().waive_for_test_exemption(
                             dossier,
                             actor=principal.user_id,
-                            key=f"submission:{dossier.id}",
-                            accepted_policy_version=accepted_fee_policy_version,
                         )
-                        if order is not None:
-                            order.provider = "test"
-                            order.is_test = True
-                            order.metadata_json = {
-                                **order.metadata_json,
-                                "testPaymentMode": "MOCK",
-                            }
+                    )
+                    self._audit_service.record(
+                        actor_user_id=principal.user_id,
+                        action="dossier.submission_fee.test_exempted",
+                        resource_type="dossier",
+                        resource_id=str(dossier.id),
+                        after={
+                            "amountMinor": 0,
+                            "grossAmountMinor": waiver_snapshot["grossAmountMinor"],
+                            "reason": waiver_snapshot["waiverReason"],
+                        },
+                    )
+                    order = None
                 elif (
                     expected_status is DossierStatus.DRAFT
                     and dossier.submission_fee_paid_at is None
@@ -1182,7 +1193,13 @@ class DossierService:
     ) -> dict[str, object]:
         async with self._session.begin():
             dossier = await self._owned_or_scoped(principal, dossier_id)
-            return await self._submission_fees().quote(dossier)
+            fee_owner = await self._session.get(User, dossier.owner_user_id)
+            if fee_owner is None:
+                raise DossierForbiddenError()
+            return await self._submission_fees().quote(
+                dossier,
+                test_exemption=fee_owner.submission_fee_test_exemption,
+            )
 
     async def retry_submission_payment(
         self, principal: AuthPrincipal, dossier_id: UUID, *, key: str

@@ -5,13 +5,20 @@ from unittest.mock import Mock
 from uuid import uuid4
 
 import pytest
+from fastapi.routing import APIRoute
 from sqlalchemy import func, select
 
+from app.api.v1.dossiers import router as dossier_router
 from app.db.outbox import OutboxEvent
 from app.modules.auth.models import User, UserStatus
 from app.modules.auth.security import OutboxPayloadCipher
+from app.modules.billing.errors import PriceCatalogConflictError
 from app.modules.billing.fees import FeePolicyService
-from app.modules.billing.models import FeeObligation, FeePolicy
+from app.modules.billing.models import (
+    FeeObligation,
+    FeeObligationStatus,
+    FeePolicy,
+)
 from app.modules.dossiers.errors import DossierForbiddenError, DossierInvalidStateError
 from app.modules.dossiers.models import (
     Dossier,
@@ -20,7 +27,7 @@ from app.modules.dossiers.models import (
     DossierVersion,
 )
 from app.modules.dossiers.types import CreateEvidence
-from app.modules.payments.errors import PaymentConflictError, PaymentNotFoundError
+from app.modules.payments.errors import PaymentNotFoundError
 from app.modules.payments.gateway import MockPaymentGateway
 from app.modules.payments.models import PaymentOrder
 from app.modules.payments.service import PaymentService
@@ -181,108 +188,118 @@ def test_submission_charge_is_once_and_payment_enters_review_not_issuance() -> N
     asyncio.run(exercise())
 
 
-def test_test_applicant_can_skip_or_simulate_without_wallet_debit() -> None:
+def test_existing_user_exemption_waives_only_submission_fee_without_payment() -> None:
     async def exercise() -> None:
         service, sessions, engine, owner, media = await _build_service()
-        test_principal = replace(_principal(owner), is_test_account=True)
-        skipped, _ = await _draft_with_evidence(
+        principal = _principal(owner)
+        draft, _ = await _draft_with_evidence(
             service,
-            test_principal,
+            principal,
             media,
             fee_policy_mode="DYNAMIC",
-            title="TEST skip without pricing",
+            title="Existing account fee exemption",
         )
-        assert skipped.is_test is True
-        skip_result = await service.submit_dossier(
-            test_principal,
-            skipped.id,
-            idempotency_key="test-skip",
-        )
-        assert skip_result.dossier.status is DossierStatus.SUBMITTED
+        policy = await _install_policy(service, sessions, owner, draft.id, 5_000_000)
         async with sessions() as session:
-            stored = await session.get(Dossier, skipped.id)
-            assert stored is not None and stored.is_test
-            assert await session.scalar(select(func.count(FeeObligation.id))) == 0
-            assert await session.scalar(select(func.count(PaymentOrder.id))) == 0
+            user = await session.get(User, owner.id)
+            assert user is not None and not user.is_test_account
+            user.submission_fee_test_exemption = True
+            await session.commit()
+        quote = await service.submission_fee_quote(principal, draft.id)
+        assert quote["feeRequired"] is False
+        assert quote["feeAvailable"] is True
+        assert quote["feeWaived"] is True
+        assert quote["amountMinor"] == 0
+        assert quote["grossAmountMinor"] == 5_000_000
+        assert quote["waiverReason"] == "TEST_SUBMISSION_FEE_EXEMPTION"
 
-        mock_draft, _ = await _draft_with_evidence(
-            service,
-            test_principal,
-            media,
-            fee_policy_mode="DYNAMIC",
-            title="TEST payment simulation",
-        )
-        policy = await _install_policy(
-            service, sessions, owner, mock_draft.id, 5_000_000
-        )
-        pending = await service.submit_dossier(
-            test_principal,
-            mock_draft.id,
-            idempotency_key="test-mock-submit",
+        submitted = await service.submit_dossier(
+            principal,
+            draft.id,
+            idempotency_key="existing-user-exempt-submit",
             accepted_fee_policy_version=policy.version_no,
-            test_payment_mode="MOCK",
+            expected_fee_test_exemption=True,
         )
-        assert pending.dossier.status is DossierStatus.PAYMENT_PENDING
+        replay = await service.submit_dossier(
+            principal,
+            draft.id,
+            idempotency_key="existing-user-exempt-submit",
+            expected_fee_test_exemption=True,
+        )
+        assert submitted.dossier.status is DossierStatus.SUBMITTED
+        assert replay.version.id == submitted.version.id
         async with sessions() as session:
-            order = await session.scalar(select(PaymentOrder))
-            obligation = await session.scalar(select(FeeObligation))
-            assert order is not None and order.is_test and order.provider == "test"
-            assert obligation is not None and obligation.is_test
-
-        payment = PaymentService(
-            session=sessions(),
-            gateway=MockPaymentGateway(webhook_secret="test-payment-secret"),
-            provider_name="mock",
-            amount_minor=1_000_000,
-            currency="VND",
-            order_ttl_seconds=3600,
-            clock=lambda: NOW,
-            payload_cipher=OutboxPayloadCipher(key=b"x" * 32, key_id="test-only"),
-        )
-        with pytest.raises(PaymentConflictError, match="simulation action"):
-            await payment.pay_with_wallet(
-                test_principal, order.id, idempotency_key="test-no-wallet"
-            )
-        result = await payment.simulate_test_payment(
-            test_principal, order.id, outcome="SUCCESS"
-        )
-        assert result.status.value == "PAID"
-        async with sessions() as session:
-            stored = await session.get(Dossier, mock_draft.id)
+            stored = await session.get(Dossier, draft.id)
             assert stored is not None
-            assert stored.is_test and stored.status is DossierStatus.SUBMITTED
-            assert stored.submitted_at == stored.submission_fee_paid_at
+            assert not stored.is_test and stored.status is DossierStatus.SUBMITTED
+            assert stored.submission_fee_waived_at is not None
+            assert stored.submission_fee_paid_at is None
+            assert stored.submission_fee_snapshot is not None
+            assert (
+                stored.submission_fee_snapshot["waiverReason"]
+                == "TEST_SUBMISSION_FEE_EXEMPTION"
+            )
+            obligation = await session.scalar(select(FeeObligation))
+            assert obligation is not None
+            assert obligation.status is FeeObligationStatus.WAIVED
+            assert obligation.amount_minor == 0
+            assert obligation.gross_amount_minor == 5_000_000
+            assert obligation.price_snapshot_json["waiverReason"] == (
+                "TEST_SUBMISSION_FEE_EXEMPTION"
+            )
+            assert await session.scalar(select(func.count(PaymentOrder.id))) == 0
             assert await session.scalar(select(func.count(WalletJournal.id))) == 0
-            assert await session.scalar(select(func.count(OutboxEvent.id))) == 1
-        await payment.close()
         await service.close()
         await engine.dispose()
 
     asyncio.run(exercise())
 
 
-def test_regular_user_cannot_set_test_submit_mode() -> None:
+def test_submission_rechecks_exemption_and_rejects_stale_waived_quote() -> None:
     async def exercise() -> None:
         service, sessions, engine, owner, media = await _build_service()
         principal = _principal(owner)
         draft, _ = await _draft_with_evidence(
             service, principal, media, fee_policy_mode="DYNAMIC"
         )
-        with pytest.raises(DossierForbiddenError):
+        policy = await _install_policy(service, sessions, owner, draft.id, 5_000_000)
+        async with sessions() as session:
+            user = await session.get(User, owner.id)
+            assert user is not None
+            user.submission_fee_test_exemption = True
+            await session.commit()
+        waived_quote = await service.submission_fee_quote(principal, draft.id)
+        assert waived_quote["feeWaived"] is True
+        async with sessions() as session:
+            user = await session.get(User, owner.id)
+            assert user is not None
+            user.submission_fee_test_exemption = False
+            await session.commit()
+
+        with pytest.raises(PriceCatalogConflictError) as error:
             await service.submit_dossier(
                 principal,
                 draft.id,
-                idempotency_key="ordinary-fake-test",
-                test_payment_mode="SKIP",
+                idempotency_key="exemption-was-revoked",
+                accepted_fee_policy_version=policy.version_no,
+                expected_fee_test_exemption=True,
             )
-        async with sessions() as session:
-            stored = await session.get(Dossier, draft.id)
-            assert stored is not None
-            assert stored.status is DossierStatus.DRAFT and not stored.is_test
+        assert error.value.code == "FEE_QUOTE_STALE"
         await service.close()
         await engine.dispose()
 
     asyncio.run(exercise())
+
+
+def test_submission_api_does_not_accept_test_payment_mode() -> None:
+    route = next(
+        route
+        for route in dossier_router.routes
+        if isinstance(route, APIRoute) and route.endpoint.__name__ == "submit_dossier"
+    )
+    header_names = {field.alias for field in route.dependant.header_params}
+    assert "X-Test-Payment-Mode" not in header_names
+    assert "X-Submission-Fee-Test-Exemption" in header_names
 
 
 def test_catalog_price_is_snapshotted_and_another_owner_cannot_retry() -> None:

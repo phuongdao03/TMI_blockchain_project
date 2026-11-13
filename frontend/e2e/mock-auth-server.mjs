@@ -27,7 +27,11 @@ const applicantUser = {
   roles: ["USER"],
   accountType: "INDIVIDUAL_APPLICANT",
 };
-const testApplicantUser = { ...applicantUser, isTestAccount: true };
+const testApplicantUser = {
+  ...applicantUser,
+  isTestAccount: false,
+  submissionFeeTestExemption: true,
+};
 const reviewerUser = {
   id: "f57912cc-714c-4ab5-9fd9-1c5b38cd902b",
   email: "reviewer@tinhhoaviet.org.vn",
@@ -47,6 +51,10 @@ const adminUser = {
   fullName: "Nguyễn Văn An",
   status: "ACTIVE",
   isEmailVerified: true,
+  isTestAccount: false,
+  submissionFeeTestExemption: false,
+  submissionFeeTestExemptionChangedAt: null,
+  submissionFeeTestExemptionChangedByUserId: null,
   providers: ["GOOGLE"],
   roles: ["USER"],
   createdAt: "2026-08-20T09:00:00Z",
@@ -3139,6 +3147,7 @@ const server = createServer(async (request, response) => {
       organizationId: input.organizationId ?? null,
       categoryId: input.categoryId,
       dossierTypeVersionId: input.dossierTypeVersionId,
+      documentRules: dossierType.currentVersion.documentRules ?? [],
       formData: input.formData ?? {},
       title: input.title,
       slug: null,

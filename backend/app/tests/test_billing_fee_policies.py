@@ -254,6 +254,89 @@ def test_fee_policy_status_is_derived_from_effective_time() -> None:
     asyncio.run(exercise())
 
 
+def test_immediate_submission_fee_apply_is_idempotent_and_keeps_future_schedule() -> (
+    None
+):
+    async def exercise() -> None:
+        engine, sessions, users, _ = await _database()
+        current_time = [NOW]
+        future_start = NOW + timedelta(days=3)
+        async with sessions() as session:
+            service = FeePolicyService(session, clock=lambda: current_time[0])
+            first = await service.apply_submission_fee(
+                actor_user_id=users[0].id,
+                amount_minor=5_000_000,
+            )
+            repeated = await service.apply_submission_fee(
+                actor_user_id=users[0].id,
+                amount_minor=5_000_000,
+            )
+            assert first.id == repeated.id
+            assert first.version_no == repeated.version_no == 1
+            assert first.starts_at == NOW
+            assert first.status is FeePolicyStatus.ACTIVE
+
+            scheduled_draft = await service.create_draft(
+                actor_user_id=users[0].id,
+                fee_type="DOSSIER_SUBMISSION",
+                dossier_type_id=None,
+                amount_minor=7_000_000,
+                starts_at=future_start,
+                ends_at=None,
+                reason="Preserved future submission fee",
+            )
+            scheduled = await service.approve(
+                scheduled_draft.id,
+                actor_user_id=users[1].id,
+                confirm_activation=True,
+            )
+            assert scheduled.status is FeePolicyStatus.SCHEDULED
+
+            current_time[0] = NOW + timedelta(microseconds=1)
+            immediate = await service.apply_submission_fee(
+                actor_user_id=users[1].id,
+                amount_minor=6_000_000,
+            )
+            assert immediate.version_no == 3
+            assert immediate.starts_at == current_time[0]
+            assert immediate.ends_at == future_start
+            assert immediate.status is FeePolicyStatus.ACTIVE
+
+            prior = await service.get_policy(first.id, at=current_time[0])
+            assert prior.ends_at == current_time[0]
+            # The read above opens an autobegun session transaction. End it
+            # before invoking the next service operation, which owns its
+            # transaction boundary.
+            await session.rollback()
+
+            current_time[0] = NOW + timedelta(microseconds=2)
+            latest = await service.apply_submission_fee(
+                actor_user_id=users[0].id,
+                amount_minor=6_500_000,
+            )
+            assert latest.version_no == 4
+            assert latest.starts_at == current_time[0]
+            previous = await service.get_policy(immediate.id, at=current_time[0])
+            assert previous.ends_at == current_time[0]
+
+            current_time[0] = NOW + timedelta(days=1)
+            resolved_now = await service.resolve(
+                fee_type="DOSSIER_SUBMISSION",
+                dossier_type_id=None,
+                at=current_time[0],
+            )
+            assert resolved_now is not None and resolved_now.id == latest.id
+            resolved_future = await service.resolve(
+                fee_type="DOSSIER_SUBMISSION",
+                dossier_type_id=None,
+                at=future_start,
+            )
+            assert resolved_future is not None and resolved_future.id == scheduled.id
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
 def test_draft_policy_can_be_cancelled_before_approval() -> None:
     async def exercise() -> None:
         engine, sessions, users, dossier_type = await _database()

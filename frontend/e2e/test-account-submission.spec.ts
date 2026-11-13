@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("TEST applicant skips the fee without starting a payment", async ({
+test("existing USER with the scoped exemption submits without a payment", async ({
   context,
   page,
 }, testInfo) => {
@@ -53,7 +53,7 @@ test("TEST applicant skips the fee without starting a payment", async ({
         required: true,
         allowedMimeTypes: ["application/pdf"],
         maxBytes: 31_457_280,
-        maxCount: 1,
+        maxCount: 3,
         defaultVisibility: "INTERNAL",
       },
     ],
@@ -92,13 +92,17 @@ test("TEST applicant skips the fee without starting a payment", async ({
   await page.route(`**/api/v1/dossiers/${id}/submission-fee`, (route) =>
     route.fulfill({
       json: envelope({
-        feeRequired: true,
+        feeRequired: false,
         feeAvailable: true,
-        amountMinor: 5_000_000,
+        amountMinor: 0,
         currency: "VND",
         policyId: "policy-1",
         policyVersionNo: 1,
-        description: "Phí hồ sơ thử nghiệm",
+        description: "Phí nộp hồ sơ được miễn theo quyền kiểm thử.",
+        feeWaived: true,
+        grossAmountMinor: 5_000_000,
+        waiverAmountMinor: 5_000_000,
+        waiverReason: "TEST_SUBMISSION_FEE_EXEMPTION",
       }),
     }),
   );
@@ -113,7 +117,10 @@ test("TEST applicant skips the fee without starting a payment", async ({
     }
   });
   await page.route(`**/api/v1/dossiers/${id}/submit`, async (route) => {
-    expect(route.request().headers()["x-test-payment-mode"]).toBe("SKIP");
+    expect(route.request().headers()["x-submission-fee-test-exemption"]).toBe(
+      "true",
+    );
+    expect(route.request().headers()["x-test-payment-mode"]).toBeUndefined();
     expect(route.request().headers()["x-fee-policy-version"]).toBeUndefined();
     await route.fulfill({
       json: envelope({
@@ -127,12 +134,32 @@ test("TEST applicant skips the fee without starting a payment", async ({
   await expect(
     page.getByRole("heading", { level: 1, name: dossier.title }),
   ).toBeVisible();
+  await page.getByRole("button", { name: /2\. Tài liệu/ }).click();
+  await expect(page.getByText("Tệp cần thêm", { exact: true })).toBeVisible();
+  const originalViewport = page.viewportSize();
+  for (const width of [320, 375, 390, 768, 1024, 1440]) {
+    await page.setViewportSize({ width, height: 960 });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+      `Dossier upload layout should fit at ${width}px`,
+    ).toBe(true);
+    await page.screenshot({
+      path: testInfo.outputPath(`dossier-upload-${width}.png`),
+      fullPage: true,
+    });
+  }
+  if (originalViewport) await page.setViewportSize(originalViewport);
   await page.getByRole("button", { name: /Kiểm tra & nộp/ }).click();
-  const mode = page.getByRole("combobox", { name: "Chế độ kiểm thử" });
-  await expect(mode).toHaveValue("SKIP");
   await expect(
-    page.getByText(/không trừ ví, không gọi cổng thanh toán thật/),
+    page.getByText("Phí nộp hồ sơ được miễn theo quyền kiểm thử."),
   ).toBeVisible();
+  await expect(page.getByText("Cần thanh toán")).toBeVisible();
+  await expect(page.getByText("0 VND", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("combobox", { name: "Chế độ kiểm thử" }),
+  ).toHaveCount(0);
   const submitButton = page.getByRole("button", { name: "Nộp hồ sơ" });
   if (testInfo.project.name === "mobile-chrome") {
     await submitButton.press("Enter");

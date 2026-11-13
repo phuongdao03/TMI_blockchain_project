@@ -37,6 +37,10 @@ class CreateFeePolicyRequest(BillingSchema):
         return value.strip() if isinstance(value, str) else value
 
 
+class ApplySubmissionFeeRequest(BillingSchema):
+    amount_minor: Annotated[int, Field(gt=0, le=10**12)]
+
+
 class CancelFeePolicyRequest(BillingSchema):
     reason: Annotated[str, Field(min_length=5, max_length=1000)]
 

@@ -164,6 +164,151 @@ class FeePolicyService:
             await self._session.flush()
             return self._view(policy, now)
 
+    async def apply_submission_fee(
+        self,
+        *,
+        actor_user_id: UUID,
+        amount_minor: int,
+    ) -> FeePolicyView:
+        """Apply a global submission fee from server time, preserving schedules."""
+        if amount_minor <= 0 or amount_minor > 10**12:
+            raise PriceCatalogConflictError(
+                "Fee amount must be a positive VND integer."
+            )
+
+        fee_type = "DOSSIER_SUBMISSION"
+        reason = "Submission fee applied immediately by an administrator."
+        async with self._session.begin():
+            await self._lock_scope(fee_type, None)
+            # Read the clock after the scope lock so a request queued behind
+            # another update cannot apply using a stale pre-lock timestamp.
+            now = self.current_time()
+            rows = await self._session.scalars(
+                select(FeePolicy)
+                .where(
+                    FeePolicy.fee_type == fee_type,
+                    FeePolicy.dossier_type_id.is_(None),
+                    FeePolicy.status.in_(APPROVED_STATUSES),
+                    FeePolicy.starts_at <= now,
+                    or_(FeePolicy.ends_at.is_(None), FeePolicy.ends_at > now),
+                )
+                .order_by(FeePolicy.starts_at.desc())
+                .with_for_update()
+            )
+            active_policies = tuple(rows)
+            if len(active_policies) > 1:
+                raise PriceCatalogConflictError(
+                    "Multiple submission fee policies are currently effective."
+                )
+            active = active_policies[0] if active_policies else None
+            if active is not None and active.amount_minor == amount_minor:
+                return self._view(active, now)
+
+            scheduled_rows = await self._session.scalars(
+                select(FeePolicy)
+                .where(
+                    FeePolicy.fee_type == fee_type,
+                    FeePolicy.dossier_type_id.is_(None),
+                    FeePolicy.status == FeePolicyStatus.SCHEDULED,
+                    FeePolicy.starts_at > now,
+                )
+                .order_by(FeePolicy.starts_at)
+                .with_for_update()
+            )
+            scheduled_policies = tuple(scheduled_rows)
+            next_scheduled = scheduled_policies[0] if scheduled_policies else None
+            next_start = (
+                self._aware(next_scheduled.starts_at)
+                if next_scheduled is not None
+                else None
+            )
+
+            if active is not None:
+                before: dict[str, object] = {
+                    "endsAt": self._aware(active.ends_at).isoformat()
+                    if active.ends_at is not None
+                    else None
+                }
+                active.ends_at = now
+                after: dict[str, object] = {"endsAt": now.isoformat()}
+                self._event(
+                    active,
+                    actor_user_id=actor_user_id,
+                    event_type="SUPERSEDED",
+                    reason="Superseded by an immediate submission fee update.",
+                    before=before,
+                    after=after,
+                )
+                self._audit.record(
+                    actor_user_id=actor_user_id,
+                    action="billing.fee_policy.superseded",
+                    resource_type="fee_policy",
+                    resource_id=str(active.id),
+                    before=before,
+                    after=after,
+                )
+
+            version_no = (
+                int(
+                    await self._session.scalar(
+                        select(func.coalesce(func.max(FeePolicy.version_no), 0)).where(
+                            FeePolicy.fee_type == fee_type,
+                            FeePolicy.dossier_type_id.is_(None),
+                        )
+                    )
+                    or 0
+                )
+                + 1
+            )
+            policy = FeePolicy(
+                id=uuid4(),
+                fee_type=fee_type,
+                dossier_type_id=None,
+                version_no=version_no,
+                amount_minor=amount_minor,
+                currency="VND",
+                display_name="Submission fee",
+                reason=reason,
+                starts_at=now,
+                ends_at=next_start,
+                status=FeePolicyStatus.DRAFT,
+                created_by_user_id=actor_user_id,
+            )
+            self._session.add(policy)
+            self._event(
+                policy,
+                actor_user_id=actor_user_id,
+                event_type="CREATED",
+                reason=reason,
+                after=self._snapshot(policy),
+            )
+            self._audit.record(
+                actor_user_id=actor_user_id,
+                action="billing.fee_policy.created",
+                resource_type="fee_policy",
+                resource_id=str(policy.id),
+                after=self._snapshot(policy),
+            )
+            policy.status = FeePolicyStatus.ACTIVE
+            policy.approved_by_user_id = actor_user_id
+            policy.approved_at = now
+            self._event(
+                policy,
+                actor_user_id=actor_user_id,
+                event_type="APPROVED",
+                reason=reason,
+                after=self._snapshot(policy),
+            )
+            self._audit.record(
+                actor_user_id=actor_user_id,
+                action="billing.fee_policy.approved",
+                resource_type="fee_policy",
+                resource_id=str(policy.id),
+                after=self._snapshot(policy),
+            )
+            await self._session.flush()
+            return self._view(policy, now)
+
     async def approve(
         self,
         policy_id: UUID,

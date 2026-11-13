@@ -459,6 +459,9 @@ export interface AdminUser {
   fullName: string | null;
   status: AdminUserStatus;
   isTestAccount: boolean;
+  submissionFeeTestExemption: boolean;
+  submissionFeeTestExemptionChangedAt: string | null;
+  submissionFeeTestExemptionChangedByUserId: string | null;
   isEmailVerified: boolean;
   providers: AdminUserProvider[];
   roles: string[];

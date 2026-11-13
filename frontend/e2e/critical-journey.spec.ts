@@ -83,7 +83,7 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
     await page.getByRole("button", { name: /Tài liệu/ }).click();
     await page.getByText("Đặt tên hiển thị cho tài liệu (tùy chọn)").click();
     await page.getByLabel("Tên tài liệu").fill("Bản gốc nhận diện");
-    await page.getByLabel("Chọn bằng chứng hồ sơ").setInputFiles({
+    await page.getByLabel("Chọn tệp cần thêm").setInputFiles({
       name: "evidence.png",
       mimeType: "image/png",
       buffer: Buffer.from(

@@ -71,6 +71,10 @@ class StubDossierService:
             "description": "Phí nộp hồ sơ",
             "policyId": "a4d28db1-1507-5a45-a50d-cd0aa83029ec",
             "policyVersionNo": 1,
+            "feeWaived": False,
+            "grossAmountMinor": None,
+            "waiverAmountMinor": None,
+            "waiverReason": None,
         }
 
     async def retry_submission_payment(
@@ -272,6 +276,10 @@ def test_submission_fee_quote_and_retry_contract() -> None:
         "description": "Phí nộp hồ sơ",
         "policyId": "a4d28db1-1507-5a45-a50d-cd0aa83029ec",
         "policyVersionNo": 1,
+        "feeWaived": False,
+        "grossAmountMinor": None,
+        "waiverAmountMinor": None,
+        "waiverReason": None,
     }
     missing_key = asyncio.run(
         _request("POST", f"{base}/submission-payment", service, principal)

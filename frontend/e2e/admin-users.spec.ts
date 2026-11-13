@@ -23,6 +23,28 @@ test.beforeEach(async ({ context }) => {
 
 test("admin users remains operable on desktop and mobile", async ({ page }) => {
   const userId = "b57912cc-714c-4ab5-9fd9-1c5b38cd902b";
+  let exemptionEnabled = false;
+  const userData = () => ({
+    id: userId,
+    email: "an@example.com",
+    fullName: "Nguyễn Văn An",
+    status: "ACTIVE",
+    isTestAccount: false,
+    isEmailVerified: true,
+    submissionFeeTestExemption: exemptionEnabled,
+    submissionFeeTestExemptionChangedAt: exemptionEnabled
+      ? "2026-11-13T08:00:00Z"
+      : null,
+    submissionFeeTestExemptionChangedByUserId: exemptionEnabled
+      ? "a57912cc-714c-4ab5-9fd9-1c5b38cd902b"
+      : null,
+    providers: ["GOOGLE"],
+    roles: ["USER"],
+    createdAt: "2026-08-20T09:00:00Z",
+    lastLoginAt: "2026-08-29T09:00:00Z",
+    disabledAt: null,
+    deletedAt: null,
+  });
   const envelope = (data: unknown) => ({
     success: true,
     data,
@@ -33,23 +55,20 @@ test("admin users remains operable on desktop and mobile", async ({ page }) => {
       total: 0,
     },
   });
+  await page.route("**/api/v1/admin/users?*", async (route) => {
+    await route.fulfill({ json: envelope([userData()]) });
+  });
   await page.route(`**/api/v1/admin/users/${userId}`, (route) =>
-    route.fulfill({
-      json: envelope({
-        id: userId,
-        email: "an@example.com",
-        fullName: "Nguyễn Văn An",
-        status: "ACTIVE",
-        isTestAccount: false,
-        isEmailVerified: true,
-        providers: ["GOOGLE"],
-        roles: ["USER"],
-        createdAt: "2026-08-20T09:00:00Z",
-        lastLoginAt: "2026-08-29T09:00:00Z",
-        disabledAt: null,
-        deletedAt: null,
-      }),
-    }),
+    route.fulfill({ json: envelope(userData()) }),
+  );
+  await page.route(
+    `**/api/v1/admin/users/${userId}/submission-fee-test-exemption`,
+    async (route) => {
+      expect(route.request().method()).toBe("PATCH");
+      expect(route.request().postDataJSON()).toEqual({ enabled: true });
+      exemptionEnabled = true;
+      await route.fulfill({ json: envelope(userData()) });
+    },
   );
   await page.route("**/api/v1/admin/audit?**", (route) =>
     route.fulfill({ json: envelope([]) }),
@@ -90,6 +109,28 @@ test("admin users remains operable on desktop and mobile", async ({ page }) => {
     ).toBeVisible();
   }
 
+  await page.getByRole("button", { name: "Xem chi tiết" }).first().click();
+  await expect(
+    page.getByRole("dialog", { name: "Chi tiết tài khoản" }),
+  ).toBeVisible();
+  await expect(page.getByText("Tài khoản thật")).toBeVisible();
+  await expect(page.getByText(/không đổi phân loại tài khoản/)).toBeVisible();
+  await page.getByRole("button", { name: "Bật kiểm thử miễn phí" }).click();
+  await expect(
+    page.getByText(
+      /Các giao dịch và hồ sơ đã phát sinh trước đó không bị thay đổi/,
+    ),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Xác nhận" }).click();
+  await expect(page.getByText("Đang bật")).toBeVisible();
+  await page.getByRole("button", { name: "Đóng chi tiết" }).click();
+  await expect(
+    (mobile
+      ? page.getByTestId("admin-users-mobile")
+      : page.getByTestId("admin-users-table")
+    ).getByText("Miễn phí kiểm thử"),
+  ).toBeVisible();
+
   await page.getByRole("button", { name: "Tạm đình chỉ" }).first().click();
   const confirm = page.getByRole("button", { name: "Xác nhận đình chỉ" });
   await expect(confirm).toBeDisabled();
@@ -99,19 +140,12 @@ test("admin users remains operable on desktop and mobile", async ({ page }) => {
   await confirm.click();
   await expect(page.getByText(/Đã đình chỉ tài khoản/)).toBeVisible();
 
+  await page.getByText("Mời tài khoản TEST mới (tùy chọn)").click();
   await page.getByLabel("Email tài khoản TEST mới").fill("tester@example.com");
   await page.getByRole("button", { name: "Gửi lời mời TEST" }).click();
   await expect(
     page.getByText(/Đã gửi lời mời TEST đến tester@example.com/),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Xem chi tiết" }).first().click();
-  await expect(
-    page.getByRole("dialog", { name: "Chi tiết tài khoản" }),
-  ).toBeVisible();
-  await expect(page.getByText("Tài khoản thật")).toBeVisible();
-  await expect(page.getByText(/không thể chuyển sang TEST/)).toBeVisible();
-  await page.getByRole("button", { name: "Đóng chi tiết" }).click();
-
   const accessibility = await new AxeBuilder({ page }).analyze();
   expect(accessibility.violations).toEqual([]);
 });

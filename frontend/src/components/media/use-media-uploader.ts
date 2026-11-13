@@ -40,6 +40,11 @@ interface UseMediaUploaderOptions {
   cleanupCompletedOnRemove: boolean;
   constraints?: MediaFileConstraints;
   disabled: boolean;
+  existingFiles?: readonly {
+    filename: string | null | undefined;
+    bytes: number;
+    mimeType: string;
+  }[];
   maxFiles?: number;
   onComplete: (asset: MediaAsset, index: number) => void | Promise<void>;
   purpose: MediaPurpose;
@@ -51,6 +56,15 @@ const BUSY_STATUSES: readonly UploadQueueItem["status"][] = [
   "verifying",
   "inspecting",
 ];
+
+function fileKey(file: File): string {
+  return [
+    file.name.toLocaleLowerCase("en"),
+    file.size,
+    file.type,
+    file.lastModified,
+  ].join("\u0000");
+}
 
 function uploadErrorMessage(error: unknown, canResume: boolean): string {
   if (
@@ -72,12 +86,15 @@ export function useMediaUploader({
   cleanupCompletedOnRemove,
   constraints,
   disabled,
+  existingFiles = [],
   maxFiles,
   onComplete,
   purpose,
 }: UseMediaUploaderOptions) {
   const nextId = useRef(0);
   const activeAbortController = useRef<AbortController | null>(null);
+  const processingRef = useRef(false);
+  const completedFileKeys = useRef(new Set<string>());
   const [items, setItems] = useState<UploadQueueItem[]>([]);
   const [selectionError, setSelectionError] = useState<string | null>(null);
   const [completedCount, setCompletedCount] = useState(0);
@@ -94,13 +111,42 @@ export function useMediaUploader({
 
   const selectFiles = useCallback(
     (nextFiles: readonly File[]) => {
-      if (!nextFiles.length || isProcessing || disabled) return;
+      if (!nextFiles.length || processingRef.current || disabled) return;
+
+      const seenKeys = new Set(items.map((item) => fileKey(item.file)));
+      const additions: File[] = [];
+      let duplicateCount = 0;
+      for (const file of nextFiles) {
+        const key = fileKey(file);
+        const alreadyAttached = existingFiles.some(
+          (existing) =>
+            existing.filename?.toLocaleLowerCase("en") ===
+              file.name.toLocaleLowerCase("en") &&
+            existing.bytes === file.size &&
+            existing.mimeType.toLocaleLowerCase("en") ===
+              file.type.toLocaleLowerCase("en"),
+        );
+        if (
+          seenKeys.has(key) ||
+          completedFileKeys.current.has(key) ||
+          alreadyAttached
+        ) {
+          duplicateCount += 1;
+          continue;
+        }
+        seenKeys.add(key);
+        additions.push(file);
+      }
+      if (additions.length === 0) {
+        setSelectionError("Tệp này đã có trong danh sách hồ sơ.");
+        return;
+      }
 
       const available =
         maxFiles === undefined
           ? Number.POSITIVE_INFINITY
           : maxFiles - items.length;
-      if (nextFiles.length > available) {
+      if (additions.length > available) {
         setSelectionError(
           available > 0
             ? `Bạn chỉ có thể thêm ${available} tệp nữa.`
@@ -110,7 +156,7 @@ export function useMediaUploader({
       }
 
       try {
-        nextFiles.forEach((file) =>
+        additions.forEach((file) =>
           validateMediaFile(file, purpose, constraints),
         );
       } catch (error) {
@@ -120,7 +166,7 @@ export function useMediaUploader({
         return;
       }
 
-      const additions = nextFiles.map<UploadQueueItem>((file) => ({
+      const queueItems = additions.map<UploadQueueItem>((file) => ({
         completion: null,
         error: null,
         file,
@@ -130,11 +176,13 @@ export function useMediaUploader({
         status: "selected",
         uploadSessionId: createMediaUploadSessionId(),
       }));
-      setItems((current) => [...current, ...additions]);
-      setSelectionError(null);
+      setItems((current) => [...current, ...queueItems]);
+      setSelectionError(
+        duplicateCount > 0 ? "Tệp đã có trong hồ sơ nên được bỏ qua." : null,
+      );
       setCompletedCount(0);
     },
-    [constraints, disabled, isProcessing, items.length, maxFiles, purpose],
+    [constraints, disabled, existingFiles, items, maxFiles, purpose],
   );
 
   const selectFile = useCallback(
@@ -144,7 +192,7 @@ export function useMediaUploader({
 
   const removeFile = useCallback(
     async (id: string) => {
-      if (isProcessing || disabled) return;
+      if (processingRef.current || disabled) return;
       const item = items.find((candidate) => candidate.id === id);
       if (cleanupCompletedOnRemove && item?.completion) {
         try {
@@ -159,16 +207,17 @@ export function useMediaUploader({
       setItems((current) => current.filter((item) => item.id !== id));
       setSelectionError(null);
     },
-    [cleanupCompletedOnRemove, disabled, isProcessing, items],
+    [cleanupCompletedOnRemove, disabled, items],
   );
 
   const startUpload = useCallback(async () => {
-    if (isProcessing || disabled) return;
+    if (processingRef.current || disabled) return;
     const pending = items.filter(
       (item) => item.status === "selected" || item.status === "failed",
     );
     if (!pending.length) return;
 
+    processingRef.current = true;
     setIsProcessing(true);
     setSelectionError(null);
     let newlyCompleted = 0;
@@ -207,6 +256,7 @@ export function useMediaUploader({
         );
         await onComplete(asset, newlyCompleted);
         newlyCompleted += 1;
+        completedFileKeys.current.add(fileKey(queued.file));
         setItems((current) => current.filter((item) => item.id !== queued.id));
       } catch (error) {
         updateItem(queued.id, {
@@ -221,16 +271,9 @@ export function useMediaUploader({
     if (newlyCompleted > 0) {
       setCompletedCount((current) => current + newlyCompleted);
     }
+    processingRef.current = false;
     setIsProcessing(false);
-  }, [
-    constraints,
-    disabled,
-    isProcessing,
-    items,
-    onComplete,
-    purpose,
-    updateItem,
-  ]);
+  }, [constraints, disabled, items, onComplete, purpose, updateItem]);
 
   const failedCount = items.filter((item) => item.status === "failed").length;
   const pendingCount = items.filter(

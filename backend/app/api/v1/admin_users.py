@@ -28,6 +28,7 @@ from app.modules.users.admin_service import (
     AdminUserQuery,
     AdminUserService,
     AdminUserStatusRequest,
+    AdminUserTestSubmissionFeeExemptionRequest,
     SortField,
     SortOrder,
 )
@@ -120,6 +121,31 @@ async def change_admin_user_status(
         session,
         firebase_admin=firebase_admin,
     ).change_status(
+        principal,
+        user_id,
+        payload,
+        audit=AuditService(session),
+        request_id=request.state.request_id,
+        user_agent=request.headers.get("user-agent"),
+    )
+    return SuccessEnvelope(
+        data=data,
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.patch(
+    "/{user_id}/submission-fee-test-exemption",
+    response_model=SuccessEnvelope[AdminUserData],
+)
+async def set_admin_user_submission_fee_test_exemption(
+    user_id: UUID,
+    payload: AdminUserTestSubmissionFeeExemptionRequest,
+    request: Request,
+    principal: CsrfProtectedPrincipalDependency,
+    session: SessionDependency,
+) -> SuccessEnvelope[AdminUserData]:
+    data = await AdminUserService(session).set_submission_fee_test_exemption(
         principal,
         user_id,
         payload,

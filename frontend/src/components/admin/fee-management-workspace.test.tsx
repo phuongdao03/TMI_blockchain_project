@@ -7,6 +7,7 @@ import { FeeManagementWorkspace } from "./fee-management-workspace";
 const { feeApi, dossierApi, auth } = vi.hoisted(() => ({
   feeApi: {
     listPolicies: vi.fn(),
+    applySubmissionFee: vi.fn(),
     listWaivers: vi.fn(),
     createPolicy: vi.fn(),
     approvePolicy: vi.fn(),
@@ -83,14 +84,15 @@ describe("FeeManagementWorkspace", () => {
     dossierApi.listTypes.mockResolvedValue([]);
   });
 
-  it("shows the current fee first and groups legacy transaction operations", () => {
+  it("shows the current fee first and groups legacy transaction operations", async () => {
     const { container } = renderWorkspace();
 
     expect(container.querySelector("main")).toBeNull();
-    expect(screen.getByText("Chưa có mức phí hiệu lực")).toBeTruthy();
+    expect(screen.getByText("Chưa thiết lập phí nộp hồ sơ")).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: "Thay đổi mức phí" }),
-    ).toBeTruthy();
+      await screen.findByLabelText("Mức phí nộp hồ sơ mới (VND)"),
+    ).toHaveProperty("value", "5000000");
+    expect(screen.getByRole("button", { name: "Áp dụng ngay" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Xem lịch sử" })).toBeTruthy();
     expect(screen.queryByRole("tablist")).toBeNull();
     fireEvent.click(screen.getByText("Giao dịch và đối soát hồ sơ legacy"));
@@ -110,6 +112,41 @@ describe("FeeManagementWorkspace", () => {
       screen.queryByRole("button", { name: "Thay đổi mức phí" }),
     ).toBeNull();
     expect(screen.queryByRole("button", { name: "Tạo chính sách" })).toBeNull();
+    expect(screen.queryByLabelText("Mức phí nộp hồ sơ mới (VND)")).toBeNull();
+  });
+
+  it("applies a changed global submission fee immediately", async () => {
+    feeApi.applySubmissionFee.mockResolvedValue({
+      id: "policy-2",
+      feeType: "DOSSIER_SUBMISSION",
+      dossierTypeId: null,
+      amountMinor: 6_200_000,
+      currency: "VND",
+      status: "ACTIVE",
+      displayName: "Submission fee",
+      reason: "Applied immediately",
+      versionNo: 2,
+      startsAt: "2026-11-13T00:00:00Z",
+      endsAt: null,
+      createdByUserId: "admin-1",
+      approvedByUserId: "admin-1",
+    });
+    renderWorkspace();
+
+    const amountInput = await screen.findByLabelText(
+      "Mức phí nộp hồ sơ mới (VND)",
+    );
+    fireEvent.change(amountInput, {
+      target: { value: "6200000" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Áp dụng ngay" }));
+
+    await waitFor(() =>
+      expect(feeApi.applySubmissionFee).toHaveBeenCalledWith({
+        amountMinor: 6_200_000,
+      }),
+    );
+    expect(feeApi.createPolicy).not.toHaveBeenCalled();
   });
 
   it("does not expose direct waiver administration to request-only accounts", () => {

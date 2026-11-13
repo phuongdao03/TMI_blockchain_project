@@ -74,6 +74,13 @@ class AdminUserData(BaseModel):
     status: UserStatus
     is_email_verified: bool = Field(alias="isEmailVerified")
     is_test_account: bool = Field(alias="isTestAccount")
+    submission_fee_test_exemption: bool = Field(alias="submissionFeeTestExemption")
+    submission_fee_test_exemption_changed_at: datetime | None = Field(
+        default=None, alias="submissionFeeTestExemptionChangedAt"
+    )
+    submission_fee_test_exemption_changed_by_user_id: UUID | None = Field(
+        default=None, alias="submissionFeeTestExemptionChangedByUserId"
+    )
     providers: tuple[str, ...]
     roles: tuple[str, ...]
     created_at: datetime = Field(alias="createdAt")
@@ -90,9 +97,16 @@ class AdminUserStatusRequest(BaseModel):
     reason: str = Field(min_length=10, max_length=500)
 
 
+class AdminUserTestSubmissionFeeExemptionRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    enabled: bool
+
+
 class AdminUserService:
     READ_USERS = PolicyRequirement(permission="users.read")
     SUSPEND_USERS = PolicyRequirement(permission="users.suspend")
+    MANAGE_TEST_EXEMPTIONS = PolicyRequirement(permission="admin.staff.manage")
 
     def __init__(
         self,
@@ -253,6 +267,70 @@ class AdminUserService:
             )
             return (await self._hydrate(((user, full_name),)))[0]
 
+    async def set_submission_fee_test_exemption(
+        self,
+        principal: AuthPrincipal,
+        user_id: UUID,
+        payload: AdminUserTestSubmissionFeeExemptionRequest,
+        *,
+        audit: AuditService,
+        request_id: str | None,
+        user_agent: str | None,
+    ) -> AdminUserData:
+        AuthorizationPolicy.require_capability(
+            principal,
+            self.MANAGE_TEST_EXEMPTIONS,
+            lambda: DomainError(
+                code="ADMIN_USER_TEST_EXEMPTION_FORBIDDEN",
+                message="Test submission fee exemption management is forbidden.",
+                status_code=403,
+            ),
+        )
+        repository = AuthRepository(self._session)
+        async with self._session.begin():
+            user = await repository.get_user_by_id_for_update(user_id)
+            if user is None:
+                raise DomainError(
+                    code="ADMIN_USER_NOT_FOUND",
+                    message="The user account was not found.",
+                    status_code=404,
+                )
+            role_codes = set(await repository.get_role_codes(user.id))
+            if role_codes != {"USER"}:
+                raise DomainError(
+                    code="ADMIN_USER_TEST_EXEMPTION_INVALID",
+                    message="Only an existing USER account can receive this exemption.",
+                    status_code=409,
+                )
+            if payload.enabled and user.status is not UserStatus.ACTIVE:
+                raise DomainError(
+                    code="ADMIN_USER_TEST_EXEMPTION_INVALID",
+                    message="Only an active USER account can receive this exemption.",
+                    status_code=409,
+                )
+            before_enabled = user.submission_fee_test_exemption
+            if before_enabled != payload.enabled:
+                now = datetime.now(UTC)
+                user.submission_fee_test_exemption = payload.enabled
+                user.submission_fee_test_exemption_changed_at = now
+                user.submission_fee_test_exemption_changed_by_user_id = (
+                    principal.user_id
+                )
+                audit.record(
+                    actor_user_id=principal.user_id,
+                    action="admin.user.submission_fee_test_exemption_changed",
+                    resource_type="user",
+                    resource_id=str(user.id),
+                    before={"enabled": before_enabled},
+                    after={"enabled": payload.enabled},
+                    request_id=request_id,
+                    user_agent=user_agent,
+                )
+            full_name = await self._session.scalar(
+                select(UserProfile.full_name).where(UserProfile.user_id == user.id)
+            )
+            return (await self._hydrate(((user, full_name),)))[0]
+
     @staticmethod
     def _apply_filters(statement: Select[Any], query: AdminUserQuery) -> Select[Any]:
         if query.search:
@@ -322,6 +400,13 @@ class AdminUserService:
                 status=user.status,
                 isEmailVerified=user.email_verified_at is not None,
                 isTestAccount=user.is_test_account,
+                submissionFeeTestExemption=user.submission_fee_test_exemption,
+                submissionFeeTestExemptionChangedAt=(
+                    user.submission_fee_test_exemption_changed_at
+                ),
+                submissionFeeTestExemptionChangedByUserId=(
+                    user.submission_fee_test_exemption_changed_by_user_id
+                ),
                 providers=tuple(providers[user.id]),
                 roles=tuple(roles[user.id]),
                 createdAt=user.created_at,

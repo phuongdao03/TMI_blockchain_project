@@ -14,6 +14,7 @@ from app.modules.auth.dependencies import (
 from app.modules.auth.session_service import AuthPrincipal
 from app.modules.billing.fees import FeePolicyService
 from app.modules.billing.schemas import (
+    ApplySubmissionFeeRequest,
     ApproveFeePolicyRequest,
     CancelFeePolicyRequest,
     CreateFeePolicyRequest,
@@ -123,6 +124,39 @@ async def create_fee_policy(
         ends_at=payload.ends_at,
         display_name=payload.display_name,
         reason=payload.reason,
+    )
+    return SuccessEnvelope(
+        data=FeePolicyData.model_validate(policy),
+        meta=ResponseMeta(request_id=request.state.request_id),
+    )
+
+
+@router.put(
+    "/fee-policies/submission/current",
+    response_model=SuccessEnvelope[FeePolicyData],
+    responses={
+        401: {"description": "Authentication is required.", "model": ErrorEnvelope},
+        403: {
+            "description": "Immediate fee application is forbidden.",
+            "model": ErrorEnvelope,
+        },
+        409: {
+            "description": "Submission fee policy conflicts with its effective scope.",
+            "model": ErrorEnvelope,
+        },
+    },
+)
+async def apply_submission_fee(
+    payload: ApplySubmissionFeeRequest,
+    request: Request,
+    principal: CsrfProtectedPrincipalDependency,
+    session: SessionDependency,
+) -> SuccessEnvelope[FeePolicyData]:
+    _require(principal, "billing.fees.policies.create")
+    _require(principal, "billing.fees.policies.approve")
+    policy = await FeePolicyService(session).apply_submission_fee(
+        actor_user_id=principal.user_id,
+        amount_minor=payload.amount_minor,
     )
     return SuccessEnvelope(
         data=FeePolicyData.model_validate(policy),

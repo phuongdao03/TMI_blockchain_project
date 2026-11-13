@@ -25,10 +25,12 @@ from app.modules.auth.models import (
     UserStatus,
 )
 from app.modules.auth.session_service import AuthPrincipal
+from app.modules.public.models import PublicWork  # noqa: F401
 from app.modules.users.admin_service import (
     AdminUserQuery,
     AdminUserService,
     AdminUserStatusRequest,
+    AdminUserTestSubmissionFeeExemptionRequest,
     SortField,
 )
 from app.modules.users.models import UserProfile
@@ -143,6 +145,10 @@ def test_admin_user_routes_are_plural_resource_contracts() -> None:
         "/api/v1/admin/users/{user_id}/status",
         frozenset({"PATCH"}),
     ) in contracts
+    assert (
+        "/api/v1/admin/users/{user_id}/submission-fee-test-exemption",
+        frozenset({"PATCH"}),
+    ) in contracts
 
 
 def test_admin_user_suspension_revokes_sessions_and_writes_audit(
@@ -218,6 +224,73 @@ def test_admin_user_suspension_revokes_sessions_and_writes_audit(
                 "reason": "Account activity requires investigation",
                 "status": "SUSPENDED",
             }
+        await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_admin_can_toggle_narrow_submission_fee_exemption_with_audit(
+    tmp_path: Path,
+) -> None:
+    async def exercise() -> None:
+        database_path = tmp_path / "admin-user-submission-exemption.sqlite3"
+        engine = create_async_engine(f"sqlite+aiosqlite:///{database_path.as_posix()}")
+        async with engine.begin() as connection:
+            await connection.run_sync(
+                lambda sync_connection: Base.metadata.create_all(
+                    sync_connection,
+                    tables=[
+                        User.__table__,
+                        AuthIdentity.__table__,
+                        Role.__table__,
+                        UserRole.__table__,
+                        UserProfile.__table__,
+                        AuditLog.__table__,
+                    ],
+                )
+            )
+        factory = async_sessionmaker(engine, expire_on_commit=False)
+        role = Role(code="USER")
+        target = User(
+            email="applicant@example.com",
+            password_hash=None,
+            status=UserStatus.ACTIVE,
+            is_test_account=False,
+        )
+        async with factory.begin() as session:
+            session.add_all([role, target])
+            await session.flush()
+            session.add(UserRole(user_id=target.id, role_id=role.id))
+
+        actor = _principal("admin.staff.manage")
+        async with factory() as session:
+            service = AdminUserService(session)
+            enabled = await service.set_submission_fee_test_exemption(
+                actor,
+                target.id,
+                AdminUserTestSubmissionFeeExemptionRequest(enabled=True),
+                audit=AuditService(session, settings=Settings.model_validate({})),
+                request_id="exemption-1",
+                user_agent="test-agent",
+            )
+            assert enabled.submission_fee_test_exemption is True
+            assert enabled.submission_fee_test_exemption_changed_at is not None
+            assert (
+                enabled.submission_fee_test_exemption_changed_by_user_id
+                == actor.user_id
+            )
+
+        async with factory() as session:
+            stored = await session.get(User, target.id)
+            audit = (await session.scalars(select(AuditLog))).one()
+            assert stored is not None
+            assert stored.submission_fee_test_exemption is True
+            assert (
+                stored.submission_fee_test_exemption_changed_by_user_id == actor.user_id
+            )
+            assert audit.action == "admin.user.submission_fee_test_exemption_changed"
+            assert audit.actor_user_id == actor.user_id
+            assert audit.after_json == {"enabled": True}
         await engine.dispose()
 
     asyncio.run(exercise())

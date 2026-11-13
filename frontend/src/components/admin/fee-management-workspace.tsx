@@ -74,6 +74,8 @@ export function FeeManagementWorkspace({
     can("billing.fees.policies.create") ||
     can("billing.fees.policies.approve") ||
     can("billing.fees.policies.cancel");
+  const canApplySubmissionFee =
+    can("billing.fees.policies.create") && can("billing.fees.policies.approve");
   const canUseWaiverTab =
     can("billing.fees.read") || can("billing.fees.waivers.approve");
   const canListWaivers =
@@ -82,10 +84,6 @@ export function FeeManagementWorkspace({
   const canIssueLegacyRequests = can("payments.issue");
   const canReconcile = can("payments.read") || can("payments.reconcile");
   const [policyAmount, setPolicyAmount] = useState("5000000");
-  const [policyName, setPolicyName] = useState("");
-  const [policyReason, setPolicyReason] = useState("");
-  const [policyStartsAt, setPolicyStartsAt] = useState("");
-  const [policyEndsAt, setPolicyEndsAt] = useState("");
   const [policyCancelReason, setPolicyCancelReason] = useState("");
   const [reviewPolicyId, setReviewPolicyId] = useState<string | null>(null);
   const [confirmActivation, setConfirmActivation] = useState(false);
@@ -111,9 +109,9 @@ export function FeeManagementWorkspace({
     (policy) => policy.feeType === "DOSSIER_SUBMISSION",
   );
   const activeSubmissionPolicy =
-    submissionPolicies.find((policy) => policy.status === "ACTIVE") ??
-    submissionPolicies.find((policy) => policy.status === "SCHEDULED") ??
-    null;
+    submissionPolicies.find((policy) => policy.status === "ACTIVE") ?? null;
+  const scheduledSubmissionPolicy =
+    submissionPolicies.find((policy) => policy.status === "SCHEDULED") ?? null;
   const reviewPolicy = submissionPolicies.find(
     (policy) => policy.id === reviewPolicyId,
   );
@@ -125,25 +123,11 @@ export function FeeManagementWorkspace({
     ]);
     setActionError("");
   };
-  const createPolicy = useMutation({
+  const applySubmissionFee = useMutation({
     mutationFn: () =>
-      feeApi.createPolicy({
-        feeType: "DOSSIER_SUBMISSION",
-        amountMinor: Number(policyAmount),
-        startsAt: new Date(policyStartsAt).toISOString(),
-        ...(policyEndsAt
-          ? { endsAt: new Date(policyEndsAt).toISOString() }
-          : {}),
-        ...(policyName.trim() ? { displayName: policyName.trim() } : {}),
-        reason: policyReason.trim(),
-      }),
-    onSuccess: async (policy) => {
-      setPolicyAmount("5000000");
-      setPolicyName("");
-      setPolicyReason("");
+      feeApi.applySubmissionFee({ amountMinor: Number(policyAmount) }),
+    onSuccess: async () => {
       setCreatePolicyOpen(false);
-      setReviewPolicyId(policy.id);
-      setConfirmActivation(false);
       await refreshFees();
     },
     onError: (error) => setActionError(isFeeError(error)),
@@ -224,16 +208,9 @@ export function FeeManagementWorkspace({
 
   const submitPolicy = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (
-      !Number.isSafeInteger(Number(policyAmount)) ||
-      Number(policyAmount) <= 0 ||
-      policyReason.trim().length < 5 ||
-      !policyStartsAt ||
-      (policyEndsAt &&
-        new Date(policyEndsAt).getTime() <= new Date(policyStartsAt).getTime())
-    )
-      return;
-    createPolicy.mutate();
+    const amount = Number(policyAmount);
+    if (!Number.isSafeInteger(amount) || amount <= 0) return;
+    applySubmissionFee.mutate();
   };
   const submitWaiver = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -265,7 +242,7 @@ export function FeeManagementWorkspace({
               >
                 {activeSubmissionPolicy
                   ? money(activeSubmissionPolicy.amountMinor)
-                  : "Chưa có mức phí hiệu lực"}
+                  : "Chưa thiết lập phí nộp hồ sơ"}
               </h2>
               {activeSubmissionPolicy ? (
                 <p className="mt-2 text-sm text-[var(--theme-muted)]">
@@ -274,16 +251,33 @@ export function FeeManagementWorkspace({
                   bản v{activeSubmissionPolicy.versionNo}
                 </p>
               ) : (
-                <p className="mt-2 max-w-2xl text-sm text-[var(--theme-muted)]">
-                  Hồ sơ mới chưa thể nộp thu phí đến khi Admin xác nhận kích
-                  hoạt một chính sách chung.
-                </p>
+                <>
+                  <p className="mt-2 max-w-2xl text-sm text-[var(--theme-muted)]">
+                    Mức phí áp dụng ngay sau khi máy chủ xác nhận. Hồ sơ chưa
+                    thể nộp thu phí khi chưa thiết lập giá.
+                  </p>
+                  {scheduledSubmissionPolicy ? (
+                    <p className="mt-2 text-sm font-medium text-amber-800">
+                      Đã lên lịch mức phí{" "}
+                      {money(scheduledSubmissionPolicy.amountMinor)} từ{" "}
+                      {formatDate(scheduledSubmissionPolicy.startsAt)}.
+                    </p>
+                  ) : null}
+                </>
               )}
             </div>
             <div className="flex flex-wrap gap-2">
-              {can("billing.fees.policies.create") ? (
+              {canApplySubmissionFee && activeSubmissionPolicy ? (
                 <Button
-                  onClick={() => setCreatePolicyOpen((open) => !open)}
+                  onClick={() => {
+                    setPolicyAmount(
+                      activeSubmissionPolicy
+                        ? String(activeSubmissionPolicy.amountMinor)
+                        : "",
+                    );
+                    setActionError("");
+                    setCreatePolicyOpen((open) => !open);
+                  }}
                   type="button"
                 >
                   Thay đổi mức phí
@@ -315,22 +309,30 @@ export function FeeManagementWorkspace({
         </section>
       ) : null}
 
-      {can("billing.fees.policies.create") && createPolicyOpen ? (
+      {canApplySubmissionFee &&
+      (createPolicyOpen ||
+        (policies.isSuccess && activeSubmissionPolicy === null)) ? (
         <form
-          className="grid gap-4 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-5 md:grid-cols-2 xl:grid-cols-3"
+          className="grid gap-4 rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
           onSubmit={submitPolicy}
         >
-          <div className="md:col-span-2 xl:col-span-3">
-            <h2 className="text-lg font-bold">Tạo mức phí chung mới</h2>
+          <div className="sm:col-span-2">
+            <h2 className="text-lg font-bold">
+              {activeSubmissionPolicy
+                ? "Thay đổi mức phí nộp hồ sơ"
+                : "Thiết lập phí nộp hồ sơ"}
+            </h2>
             <p className="mt-1 text-sm text-[var(--theme-muted)]">
-              Áp dụng cho mọi loại hồ sơ. Bản nháp chỉ có hiệu lực sau bước xem
-              lại và xác nhận.
+              Mức mới có hiệu lực ngay khi máy chủ xác nhận. Phiên bản hiện tại
+              kết thúc đúng thời điểm đó; lịch đã lên vẫn được giữ.
             </p>
           </div>
-          <label className="grid gap-1.5 text-sm font-semibold">
-            Mức phí (VND)
+          <label className="grid min-w-0 gap-1.5 text-sm font-semibold">
+            Mức phí nộp hồ sơ mới (VND)
             <input
               className={fieldClass}
+              inputMode="numeric"
+              max="1000000000000"
               min="1"
               onChange={(event) => setPolicyAmount(event.target.value)}
               required
@@ -338,57 +340,25 @@ export function FeeManagementWorkspace({
               value={policyAmount}
             />
           </label>
-          <label className="grid gap-1.5 text-sm font-semibold">
-            Tên hiển thị (tùy chọn)
-            <input
-              className={fieldClass}
-              maxLength={255}
-              onChange={(event) => setPolicyName(event.target.value)}
-              value={policyName}
-            />
-          </label>
-          <label className="grid gap-1.5 text-sm font-semibold">
-            Bắt đầu áp dụng
-            <input
-              className={fieldClass}
-              onChange={(event) => setPolicyStartsAt(event.target.value)}
-              required
-              type="datetime-local"
-              value={policyStartsAt}
-            />
-          </label>
-          <label className="grid gap-1.5 text-sm font-semibold">
-            Kết thúc (tùy chọn)
-            <input
-              className={fieldClass}
-              onChange={(event) => setPolicyEndsAt(event.target.value)}
-              type="datetime-local"
-              value={policyEndsAt}
-            />
-          </label>
-          <label className="grid gap-1.5 text-sm font-semibold md:col-span-2 xl:col-span-3">
-            Căn cứ / lý do
-            <input
-              className={fieldClass}
-              maxLength={1000}
-              minLength={5}
-              onChange={(event) => setPolicyReason(event.target.value)}
-              required
-              value={policyReason}
-            />
-          </label>
-          <div className="flex flex-wrap gap-2 md:col-span-2 xl:col-span-3">
-            <Button disabled={createPolicy.isPending} type="submit">
-              {createPolicy.isPending ? "Đang tạo…" : "Tạo bản nháp"}
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button disabled={applySubmissionFee.isPending} type="submit">
+              {applySubmissionFee.isPending ? "Đang áp dụng…" : "Áp dụng ngay"}
             </Button>
-            <Button
-              onClick={() => setCreatePolicyOpen(false)}
-              type="button"
-              variant="outline"
-            >
-              Đóng
-            </Button>
+            {activeSubmissionPolicy ? (
+              <Button
+                onClick={() => setCreatePolicyOpen(false)}
+                type="button"
+                variant="outline"
+              >
+                Đóng
+              </Button>
+            ) : null}
           </div>
+          {actionError ? (
+            <p className="sm:col-span-2 text-sm text-red-700" role="alert">
+              {actionError}
+            </p>
+          ) : null}
         </form>
       ) : null}
 

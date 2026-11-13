@@ -186,12 +186,30 @@ function ruleProgress(
     .length;
 }
 
+function evidenceTypeLabel(
+  dossier: DossierDetail,
+  evidence: DossierEvidence,
+): string {
+  return (
+    dossier.documentRules.find((rule) => rule.key === evidence.evidenceRole)
+      ?.label ??
+    {
+      OWNERSHIP_DOCUMENT: "Quyền hoặc nguồn gốc",
+      CREATIVE_WORK: "Tác phẩm được đề cử",
+      OTHER: "Tài liệu khác",
+    }[evidence.evidenceType] ??
+    "Tài liệu hồ sơ"
+  );
+}
+
 function EvidenceItem({
   canEdit,
+  documentTypeLabel,
   evidence,
   onRemove,
 }: {
   canEdit: boolean;
+  documentTypeLabel: string;
   evidence: DossierEvidence;
   onRemove: (id: string) => void;
 }) {
@@ -224,24 +242,28 @@ function EvidenceItem({
         <FileCheck2 aria-hidden="true" className="size-5" />
       </span>
       <div className="min-w-0">
-        <h3 className="truncate text-sm font-bold text-neutral-950">
-          {evidence.title}
+        <h3
+          className="truncate text-sm font-bold text-neutral-950"
+          title={evidence.filename ?? evidence.title}
+        >
+          {evidence.filename ?? evidence.title}
         </h3>
-        <p className="mt-1 text-xs text-neutral-500">
-          <span
-            className="block break-all"
-            title={evidence.filename ?? evidence.title}
-          >
-            {evidence.filename ?? evidence.title}
-          </span>
-          <span className="mt-1 block">
-            {evidence.mimeType} · {formatBytes(evidence.bytes)}
-          </span>
+        <p className="mt-1 text-xs text-neutral-600">
+          {evidence.mimeType} · {formatBytes(evidence.bytes)}
         </p>
-        <p className="mt-1 text-xs font-medium text-emerald-700">
-          Đã tải lên · đã kiểm tra an toàn
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+          <span className="font-semibold text-primary-800">
+            {documentTypeLabel}
+          </span>
+          {evidence.title !== documentTypeLabel &&
+          evidence.title !== evidence.filename ? (
+            <span className="text-neutral-600">· {evidence.title}</span>
+          ) : null}
+        </div>
+        <p className="mt-1 text-xs font-medium text-emerald-800">
+          Đã tải lên và kiểm tra an toàn
         </p>
-        <p className="mt-1 text-xs font-medium text-neutral-500">
+        <p className="mt-1 text-xs text-neutral-600">
           {evidenceScopeLabel(evidence.accessScope)}
         </p>
       </div>
@@ -265,7 +287,7 @@ function EvidenceItem({
             Xóa
           </Button>
         ) : (
-          <span className="inline-flex items-center gap-1.5 text-xs font-bold text-neutral-500">
+          <span className="inline-flex items-center gap-1.5 text-xs font-bold text-neutral-600">
             <LockKeyhole aria-hidden="true" className="size-4" />
             Đã khóa
           </span>
@@ -473,9 +495,6 @@ export function DossierWorkspace({
   const [acceptedFeePolicyVersion, setAcceptedFeePolicyVersion] = useState<
     number | null
   >(null);
-  const [testPaymentMode, setTestPaymentMode] = useState<"SKIP" | "MOCK">(
-    "SKIP",
-  );
   const queryClient = useQueryClient();
   const detail = useQuery({
     queryKey: dossierKeys.detail(dossierId),
@@ -546,7 +565,7 @@ export function DossierWorkspace({
             dossierId,
             key,
             acceptedFeePolicyVersion,
-            user?.isTestAccount ? testPaymentMode : undefined,
+            submissionFee.data?.feeWaived === true,
           );
     },
     onError: () => void submissionFee.refetch(),
@@ -910,7 +929,7 @@ export function DossierWorkspace({
                 </p>
               </div>
               {dossier.canEdit && !submissionComplete ? (
-                <div className="space-y-5 rounded-2xl bg-[var(--theme-elevated)] p-4 sm:p-5">
+                <div className="space-y-4">
                   {documentRules.length > 0 ? (
                     <fieldset className="space-y-3">
                       <legend className="text-sm font-bold">
@@ -974,14 +993,14 @@ export function DossierWorkspace({
                     </p>
                   ) : null}
                   {selectedRule ? (
-                    <p className="rounded-lg bg-[var(--theme-surface)] px-3 py-2 text-xs leading-5 text-[var(--theme-muted)]">
+                    <p className="text-xs leading-5 text-[var(--theme-muted)]">
                       {selectedRule.required
                         ? "Cần có để nộp hồ sơ"
                         : "Không bắt buộc"}{" "}
                       · {evidenceScopeLabel(selectedRule.defaultVisibility)}.
                     </p>
                   ) : null}
-                  <details className="rounded-xl bg-[var(--theme-surface)] p-3 sm:p-4">
+                  <details className="rounded-lg border border-[var(--theme-border)] px-3 py-2.5">
                     <summary className="cursor-pointer text-sm font-semibold">
                       Đặt tên hiển thị cho tài liệu (tùy chọn)
                     </summary>
@@ -1009,11 +1028,9 @@ export function DossierWorkspace({
                       </p>
                     </div>
                   </details>
-                  <div>
-                    <p className="mb-2 text-sm font-bold">Thêm tài liệu</p>
+                  <div className="min-w-0">
                     <FileUploader
                       compact
-                      key={selectedRule?.key ?? evidenceType}
                       constraints={
                         selectedRule
                           ? {
@@ -1023,7 +1040,17 @@ export function DossierWorkspace({
                           : undefined
                       }
                       disabled={attach.isPending || selectedRuleAtCapacity}
-                      label={selectedRule?.label ?? "Bằng chứng hồ sơ"}
+                      existingFiles={dossier.evidences.map((evidence) => ({
+                        filename: evidence.filename,
+                        bytes: evidence.bytes,
+                        mimeType: evidence.mimeType,
+                      }))}
+                      idleMessage={
+                        dossier.evidences.length
+                          ? "Chưa chọn thêm tệp. Tài liệu đã tải vẫn ở danh sách bên dưới."
+                          : undefined
+                      }
+                      label="Tệp cần thêm"
                       maxFiles={
                         selectedRule
                           ? selectedRule.maxCount - selectedRuleCount
@@ -1072,6 +1099,7 @@ export function DossierWorkspace({
                   dossier.evidences.map((evidence) => (
                     <EvidenceItem
                       canEdit={dossier.canEdit}
+                      documentTypeLabel={evidenceTypeLabel(dossier, evidence)}
                       evidence={evidence}
                       key={evidence.id}
                       onRemove={(id) => remove.mutate(id)}
@@ -1206,6 +1234,7 @@ export function DossierWorkspace({
               {dossier.evidences.map((evidence) => (
                 <EvidenceItem
                   canEdit={false}
+                  documentTypeLabel={evidenceTypeLabel(dossier, evidence)}
                   evidence={evidence}
                   key={evidence.id}
                   onRemove={() => undefined}
@@ -1228,35 +1257,7 @@ export function DossierWorkspace({
                       </p>
                     </div>
                   </div>
-                  {dossier.status === "DRAFT" && user?.isTestAccount ? (
-                    <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50 p-4">
-                      <label className="grid max-w-sm gap-2 text-sm font-semibold">
-                        Chế độ kiểm thử
-                        <select
-                          className="min-h-11 rounded-xl border border-amber-300 bg-white px-3"
-                          onChange={(event) =>
-                            setTestPaymentMode(
-                              event.target.value as "SKIP" | "MOCK",
-                            )
-                          }
-                          value={testPaymentMode}
-                        >
-                          <option value="SKIP">
-                            Bỏ qua phí để kiểm thử hồ sơ
-                          </option>
-                          <option value="MOCK">
-                            Mô phỏng thanh toán thành công / thất bại
-                          </option>
-                        </select>
-                      </label>
-                      <p className="mt-2 text-xs leading-5 text-neutral-700">
-                        Chế độ TEST không trừ ví, không gọi cổng thanh toán thật
-                        và không ghi doanh thu.
-                      </p>
-                    </div>
-                  ) : null}
-                  {dossier.status === "DRAFT" &&
-                  (!user?.isTestAccount || testPaymentMode === "MOCK") ? (
+                  {dossier.status === "DRAFT" ? (
                     <div
                       className="mt-4 border-t border-[var(--theme-border)] pt-4 text-sm"
                       aria-live="polite"
@@ -1267,6 +1268,37 @@ export function DossierWorkspace({
                           lưu. Vui lòng thử lại sau khi Admin kích hoạt chính
                           sách phí.
                         </p>
+                      ) : submissionFee.data?.feeWaived ? (
+                        <div className="space-y-1.5 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-950">
+                          <p className="font-semibold">
+                            {submissionFee.data.description}
+                          </p>
+                          <div className="grid gap-x-4 gap-y-1 text-sm sm:grid-cols-2">
+                            <span>Phí nộp hồ sơ</span>
+                            <span className="font-semibold sm:text-right">
+                              {new Intl.NumberFormat("vi-VN").format(
+                                submissionFee.data.grossAmountMinor ?? 0,
+                              )}{" "}
+                              {submissionFee.data.currency}
+                            </span>
+                            <span>Miễn phí kiểm thử</span>
+                            <span className="font-semibold sm:text-right">
+                              −
+                              {new Intl.NumberFormat("vi-VN").format(
+                                submissionFee.data.waiverAmountMinor ?? 0,
+                              )}{" "}
+                              {submissionFee.data.currency}
+                            </span>
+                            <span className="font-bold">Cần thanh toán</span>
+                            <span className="font-bold sm:text-right">
+                              0 {submissionFee.data.currency}
+                            </span>
+                          </div>
+                          <p className="text-xs leading-5 text-emerald-900">
+                            Không tạo khoản phải trả hoặc giao dịch ví cho phí
+                            nộp.
+                          </p>
+                        </div>
                       ) : submissionFee.data?.feeRequired ? (
                         <>
                           <p className="font-bold">
@@ -1335,7 +1367,6 @@ export function DossierWorkspace({
                       submit.isPending ||
                       submissionComplete ||
                       (dossier.status === "DRAFT" &&
-                        (!user?.isTestAccount || testPaymentMode === "MOCK") &&
                         (submissionFee.isPending ||
                           submissionFee.isError ||
                           submissionFee.data?.feeAvailable === false ||

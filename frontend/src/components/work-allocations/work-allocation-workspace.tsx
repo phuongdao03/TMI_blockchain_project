@@ -191,7 +191,7 @@ export function WorkAllocationWorkspace() {
       aria-labelledby="work-allocations-title"
       className="mx-auto max-w-7xl space-y-6 pb-12"
     >
-      <header className="rounded-2xl border border-neutral-800 bg-neutral-950 px-5 py-6 text-white sm:px-8 sm:py-7">
+      <header className="rounded-2xl bg-neutral-950 px-5 py-6 text-white sm:px-8 sm:py-7">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <div className="flex items-center gap-2 text-sm font-semibold text-primary-200">

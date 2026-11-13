@@ -305,6 +305,63 @@ describe("FileUploader", () => {
     expect(screen.getByRole("button", { name: "Tải lên 1 tệp" })).toBeDefined();
   });
 
+  it("skips a duplicate file already queued", async () => {
+    const user = userEvent.setup();
+    render(
+      <FileUploader
+        label="Bằng chứng hồ sơ"
+        multiple
+        onComplete={vi.fn()}
+        purpose="DOSSIER_EVIDENCE"
+      />,
+    );
+    const input = screen.getByLabelText("Chọn bằng chứng hồ sơ");
+    const file = new File(["same"], "same.pdf", {
+      type: "application/pdf",
+      lastModified: 123,
+    });
+
+    await user.upload(input, file);
+    await user.upload(
+      input,
+      new File(["same"], "same.pdf", {
+        type: "application/pdf",
+        lastModified: 123,
+      }),
+    );
+
+    expect(screen.getByRole("button", { name: "Tải lên 1 tệp" })).toBeDefined();
+    expect(screen.getByRole("alert").textContent).toContain(
+      "Tệp này đã có trong danh sách hồ sơ",
+    );
+  });
+
+  it("does not queue a file that is already attached to the dossier", async () => {
+    const user = userEvent.setup();
+    const file = new File(["same"], "same.pdf", {
+      type: "application/pdf",
+      lastModified: 123,
+    });
+    render(
+      <FileUploader
+        existingFiles={[
+          { filename: "same.pdf", bytes: file.size, mimeType: file.type },
+        ]}
+        label="Tệp cần thêm"
+        multiple
+        onComplete={vi.fn()}
+        purpose="DOSSIER_EVIDENCE"
+      />,
+    );
+
+    await user.upload(screen.getByLabelText("Chọn tệp cần thêm"), file);
+
+    expect(screen.getByRole("alert").textContent).toContain(
+      "Tệp này đã có trong danh sách hồ sơ",
+    );
+    expect(screen.queryByText("same.pdf")).toBeNull();
+  });
+
   it("uses the selected dossier rule for the picker and browser validation", () => {
     render(
       <FileUploader

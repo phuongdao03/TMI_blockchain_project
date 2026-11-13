@@ -8,7 +8,12 @@ import { AuthUserProvider } from "@/lib/auth/user-context";
 import { adminUsersApi, auditApi, staffInvitationsApi } from "@/lib/api/client";
 
 vi.mock("@/lib/api/client", () => ({
-  adminUsersApi: { list: vi.fn(), detail: vi.fn(), changeStatus: vi.fn() },
+  adminUsersApi: {
+    list: vi.fn(),
+    detail: vi.fn(),
+    changeStatus: vi.fn(),
+    setSubmissionFeeTestExemption: vi.fn(),
+  },
   auditApi: { list: vi.fn() },
   staffInvitationsApi: { createTestApplicant: vi.fn() },
   ApiError: class extends Error {},
@@ -48,6 +53,9 @@ describe("AdminUserWorkspace", () => {
           fullName: "Nguyen Van An",
           status: "ACTIVE",
           isTestAccount: true,
+          submissionFeeTestExemption: false,
+          submissionFeeTestExemptionChangedAt: null,
+          submissionFeeTestExemptionChangedByUserId: null,
           isEmailVerified: true,
           providers: ["GOOGLE"],
           roles: ["USER"],
@@ -66,6 +74,9 @@ describe("AdminUserWorkspace", () => {
       status: "ACTIVE",
       isEmailVerified: true,
       isTestAccount: true,
+      submissionFeeTestExemption: false,
+      submissionFeeTestExemptionChangedAt: null,
+      submissionFeeTestExemptionChangedByUserId: null,
       providers: ["GOOGLE"],
       roles: ["USER"],
       createdAt: "2026-08-20T09:00:00Z",
@@ -79,6 +90,23 @@ describe("AdminUserWorkspace", () => {
       meta: { request_id: "audit-1", page: 1, pageSize: 20, total: 0 },
     });
     vi.mocked(adminUsersApi.changeStatus).mockResolvedValue(undefined as never);
+    vi.mocked(adminUsersApi.setSubmissionFeeTestExemption).mockResolvedValue({
+      id: "user-1",
+      email: "an@example.com",
+      fullName: "Nguyen Van An",
+      status: "ACTIVE",
+      isEmailVerified: true,
+      isTestAccount: true,
+      submissionFeeTestExemption: true,
+      submissionFeeTestExemptionChangedAt: "2026-11-13T10:00:00Z",
+      submissionFeeTestExemptionChangedByUserId: "admin-1",
+      providers: ["GOOGLE"],
+      roles: ["USER"],
+      createdAt: "2026-08-20T09:00:00Z",
+      lastLoginAt: "2026-08-29T09:00:00Z",
+      disabledAt: null,
+      deletedAt: null,
+    });
     vi.mocked(staffInvitationsApi.createTestApplicant).mockResolvedValue({
       id: "invitation-1",
     } as never);
@@ -93,6 +121,11 @@ describe("AdminUserWorkspace", () => {
       "md:hidden",
     );
     expect(screen.getAllByText("Tài khoản TEST").length).toBeGreaterThan(0);
+    expect(
+      screen.getByText("Mời tài khoản TEST mới (tùy chọn)").closest("details")
+        ?.open,
+    ).toBe(false);
+    expect(screen.queryAllByText("Miễn phí kiểm thử")).toHaveLength(0);
     fireEvent.click(
       screen.getAllByRole("button", { name: "Xem chi tiết" })[0]!,
     );
@@ -100,7 +133,7 @@ describe("AdminUserWorkspace", () => {
       await screen.findByRole("dialog", { name: "Chi tiết tài khoản" }),
     ).toBeTruthy();
     expect(
-      await screen.findByText(/Đây là tài khoản kiểm thử riêng/),
+      await screen.findByText(/Tài khoản này có cờ TEST riêng/),
     ).toBeTruthy();
     await waitFor(() =>
       expect(auditApi.list).toHaveBeenCalledWith({
@@ -110,7 +143,23 @@ describe("AdminUserWorkspace", () => {
         resourceId: "user-1",
       }),
     );
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Bật kiểm thử miễn phí" }),
+    );
+    expect(
+      await screen.findByText(
+        /Các giao dịch và hồ sơ đã phát sinh trước đó không bị thay đổi/,
+      ),
+    ).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Xác nhận" }));
+    await waitFor(() =>
+      expect(adminUsersApi.setSubmissionFeeTestExemption).toHaveBeenCalledWith(
+        "user-1",
+        true,
+      ),
+    );
 
+    fireEvent.click(screen.getByText("Mời tài khoản TEST mới (tùy chọn)"));
     fireEvent.change(screen.getByLabelText("Email tài khoản TEST mới"), {
       target: { value: "test@example.com" },
     });

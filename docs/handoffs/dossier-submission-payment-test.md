@@ -63,3 +63,41 @@ Apply migrations only through the normal release process after staging verificat
 
 - CI run #441 still timed out on the mobile pointer click after adding scroll clearance. Its failure screenshot showed the button above the visible navigation, while Playwright continued to report navigation pointer interception.
 - The policy E2E now activates the mobile submit button with Enter and retains the desktop pointer click. It still verifies the TEST header and zero payment requests. The focused mobile spec passed locally with `CI=true`; the full matrix was not rerun locally.
+## Latest fee, exemption, and upload follow-up - 2026-11-13
+
+- Immediate global submission-fee updates now use server time under the
+  fee-scope lock, supersede only the current policy, preserve the next scheduled
+  policy, and return without creating another version when the amount is
+  unchanged. The endpoint requires both fee-policy create and approve
+  permissions.
+- Existing active USER accounts can receive a separate, audited submission-fee
+  test exemption. It does not change `is_test_account`, role, wallet behavior,
+  or other TEST isolation. Submission rechecks the current exemption under lock
+  and rejects a stale client quote. Exempt submissions store the gross fee and
+  waiver snapshot without creating a payment order.
+- Submission no longer accepts `X-Test-Payment-Mode`. The client sends
+  `X-Submission-Fee-Test-Exemption`; the server remains authoritative. Migration
+  0165 adds exemption state and audit attribution. It has not been applied to
+  production or any shared database.
+- Admin fee and user workspaces now separate active fee, history, optional TEST
+  invitations, and the scoped fee exemption. The dossier upload view filters
+  duplicate files, locks concurrent selection/upload actions, and keeps existing
+  file identity, safety, visibility, and integrity details.
+- The work-allocation page header now retains its dark background beneath the
+  global dashboard header selector.
+- Verification: official `npm run typecheck` passed (frontend typegen/tsc and
+  backend mypy); frontend ESLint and backend Ruff lint/format passed; focused
+  backend fee/admin/dossier tests passed 26/26; final desktop/mobile Playwright
+  run passed 4/4. Responsive assertions cover 320, 375, 390, 768, 1024, and 1440
+  px and run Axe checks. The full frontend suite passed 1,086 tests across 248
+  files, and root tests passed 10/10.
+- The full backend suite reported 1,126 passed, 3 skipped, 2 failed, and 242
+  errors. The two dossier API contract failures were stale test doubles and now
+  pass in the focused 26-test run. The remaining broad-suite setup/integration
+  errors were not individually diagnosed, and the full suite was not rerun after
+  these fixes.
+- Root `format:check` passes after restoring the test-specific entries that
+  Next.js generated in `frontend/tsconfig.json`. All changed frontend files pass
+  Prettier, and backend Ruff format passes.
+- Changes are committed locally only. No production migration, deployment, real
+  invitation, payment, or push was performed.

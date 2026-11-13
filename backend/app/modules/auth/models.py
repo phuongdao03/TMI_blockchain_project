@@ -90,6 +90,15 @@ class User(UtcTimestampMixin, Base):
     is_test_account: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=false()
     )
+    submission_fee_test_exemption: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=false()
+    )
+    submission_fee_test_exemption_changed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True)
+    )
+    submission_fee_test_exemption_changed_by_user_id: Mapped[UUID | None] = (
+        mapped_column(Uuid, ForeignKey("users.id", ondelete="SET NULL"))
+    )
     account_type: Mapped[AccountType | None] = mapped_column(
         Enum(
             AccountType,

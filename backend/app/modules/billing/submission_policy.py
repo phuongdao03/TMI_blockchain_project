@@ -47,6 +47,7 @@ UNAVAILABLE_FEE_QUOTE = {
     "policyId": None,
     "policyVersionNo": None,
 }
+TEST_EXEMPTION_REASON = "TEST_SUBMISSION_FEE_EXEMPTION"
 
 
 class SubmissionFeeService:
@@ -57,7 +58,27 @@ class SubmissionFeeService:
         self._policies = FeePolicyService(session, clock=lambda: self.now)
         self._billing = BillingRepository(session)
 
-    async def quote(self, dossier: Dossier) -> dict[str, object]:
+    async def quote(
+        self, dossier: Dossier, *, test_exemption: bool = False
+    ) -> dict[str, object]:
+        if test_exemption:
+            current_quote = await self.quote(dossier)
+            gross_amount = current_quote.get("amountMinor")
+            if current_quote.get("feeAvailable") is not True or not isinstance(
+                gross_amount, int
+            ):
+                gross_amount = 0
+            return {
+                **current_quote,
+                "feeRequired": False,
+                "feeAvailable": True,
+                "amountMinor": 0,
+                "description": "Phí nộp hồ sơ được miễn theo quyền kiểm thử.",
+                "feeWaived": True,
+                "grossAmountMinor": gross_amount,
+                "waiverAmountMinor": gross_amount,
+                "waiverReason": TEST_EXEMPTION_REASON,
+            }
         if dossier.submission_fee_snapshot is not None:
             snapshot = dict(dossier.submission_fee_snapshot)
             snapshot.setdefault("feeRequired", True)
@@ -83,6 +104,91 @@ class SubmissionFeeService:
             "policyId": str(policy.id),
             "policyVersionNo": policy.version_no,
         }
+
+    async def waive_for_test_exemption(
+        self,
+        dossier: Dossier,
+        *,
+        actor: UUID,
+    ) -> dict[str, object]:
+        if dossier.submission_fee_paid_at is not None:
+            raise PriceCatalogConflictError(
+                "A paid submission fee cannot be changed to a test exemption."
+            )
+        if dossier.submission_fee_waived_at is not None:
+            return await self.quote(dossier)
+
+        quote = await self.quote(dossier, test_exemption=True)
+        gross_amount = quote["grossAmountMinor"]
+        waiver_amount = quote["waiverAmountMinor"]
+        policy_id_value = quote.get("policyId")
+        policy_version = quote.get("policyVersionNo")
+        policy_id = UUID(policy_id_value) if isinstance(policy_id_value, str) else None
+        snapshot = {
+            **quote,
+            "feeType": FEE_TYPE,
+            "grossAmountMinor": gross_amount,
+            "waiverAmountMinor": waiver_amount,
+            "amountMinor": 0,
+            "waiverActorUserId": str(actor),
+        }
+        obligation = await self._billing.obligation_for_dossier(
+            dossier.id, fee_type=FEE_TYPE
+        )
+        if obligation is None:
+            obligation = FeeObligation(
+                id=uuid4(),
+                dossier_id=dossier.id,
+                is_test=dossier.is_test,
+                owner_user_id=dossier.owner_user_id,
+                price_catalog_version_id=None,
+                price_catalog_entry_id=None,
+                service_code=FEE_TYPE,
+                description=str(quote["description"]),
+                amount_minor=0,
+                currency="VND",
+                tax_mode="UNSPECIFIED",
+                status=FeeObligationStatus.WAIVED,
+                due_at=self.now,
+                paid_at=None,
+                price_snapshot_json=snapshot,
+                fee_type=FEE_TYPE,
+                fee_policy_id=policy_id,
+                fee_policy_version_no=(
+                    policy_version if isinstance(policy_version, int) else None
+                ),
+                gross_amount_minor=(
+                    gross_amount if isinstance(gross_amount, int) else 0
+                ),
+                waiver_amount_minor=(
+                    waiver_amount if isinstance(waiver_amount, int) else 0
+                ),
+            )
+            self._billing.add_obligation(obligation)
+        else:
+            if obligation.status is FeeObligationStatus.PAID:
+                raise PriceCatalogConflictError(
+                    "A paid submission fee cannot be changed to a test exemption."
+                )
+            obligation.status = FeeObligationStatus.WAIVED
+            obligation.amount_minor = 0
+            obligation.paid_at = None
+            obligation.price_snapshot_json = snapshot
+            obligation.fee_policy_id = policy_id
+            obligation.fee_policy_version_no = (
+                policy_version if isinstance(policy_version, int) else None
+            )
+            obligation.gross_amount_minor = (
+                gross_amount if isinstance(gross_amount, int) else 0
+            )
+            obligation.waiver_amount_minor = (
+                waiver_amount if isinstance(waiver_amount, int) else 0
+            )
+
+        dossier.submission_fee_required = False
+        dossier.submission_fee_snapshot = snapshot
+        dossier.submission_fee_waived_at = self.now
+        return snapshot
 
     async def reserve(
         self,
