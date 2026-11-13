@@ -139,8 +139,8 @@ test("TEST applicant skips the fee without starting a payment", async ({
   );
   await submitButton.evaluate((button) => {
     const navigation = document.querySelector(".site-mobile-navigation");
-    const scrollport = document.scrollingElement;
-    if (!navigation || !scrollport) return;
+    const scrollport = document.documentElement;
+    if (!navigation) return;
 
     const safeBottom = navigation.getBoundingClientRect().top - 16;
     const overlap = button.getBoundingClientRect().bottom - safeBottom;
