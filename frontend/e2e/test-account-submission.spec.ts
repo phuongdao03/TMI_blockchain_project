@@ -133,7 +133,11 @@ test("TEST applicant skips the fee without starting a payment", async ({
   await expect(
     page.getByText(/không trừ ví, không gọi cổng thanh toán thật/),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Nộp hồ sơ" }).click();
+  const submitButton = page.getByRole("button", { name: "Nộp hồ sơ" });
+  await submitButton.evaluate((button) =>
+    button.scrollIntoView({ block: "center" }),
+  );
+  await submitButton.click();
   await expect(page.getByText("Hồ sơ đã được gửi thành công")).toBeVisible();
   expect(paymentRequests).toBe(0);
 });

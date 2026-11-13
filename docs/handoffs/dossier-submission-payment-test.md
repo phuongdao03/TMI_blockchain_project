@@ -58,3 +58,8 @@ Apply migrations only through the normal release process after staging verificat
 
 - The first CI run after `baed293` completed 120 tests, skipped 9, and failed two browser tests. The fee test used a non-unique text locator; it now matches the exact amount. The legacy payment test queried a form inside a collapsed disclosure; it now opens the section, and its reset fixture explicitly marks the approved dossier as `LEGACY`.
 - The two affected desktop browser tests pass locally together (2/2). The complete E2E matrix was not rerun locally; CI had passed the other 120 tests in the reported run.
+
+## E2E mobile follow-up — 2026-11-13
+
+- The next CI run passed the previous fixes and exposed one mobile TEST-submission click intercepted by the fixed bottom navigation. The E2E now centers the submit action in the viewport before a normal click.
+- The mobile TEST-submission spec passed five repeated runs locally in CI retry mode. Full E2E was not rerun locally.
