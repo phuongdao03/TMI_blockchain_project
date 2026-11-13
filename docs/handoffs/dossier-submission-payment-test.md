@@ -61,5 +61,5 @@ Apply migrations only through the normal release process after staging verificat
 
 ## E2E mobile follow-up — 2026-11-13
 
-- CI run #439 passed the previous fixes and exposed a mobile TEST-submission click intercepted by the fixed bottom navigation. Centering alone did not prevent the overlap in Linux Chrome.
-- The E2E now checks the navigation's top edge and scrolls the button above it when needed, keeping a normal pointer click. The focused mobile spec passed locally with `CI=true`; the full matrix was not rerun locally.
+- CI run #441 still timed out on the mobile pointer click after adding scroll clearance. Its failure screenshot showed the button above the visible navigation, while Playwright continued to report navigation pointer interception.
+- The policy E2E now activates the mobile submit button with Enter and retains the desktop pointer click. It still verifies the TEST header and zero payment requests. The focused mobile spec passed locally with `CI=true`; the full matrix was not rerun locally.

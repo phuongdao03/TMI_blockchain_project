@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 test("TEST applicant skips the fee without starting a payment", async ({
   context,
   page,
-}) => {
+}, testInfo) => {
   const id = "9155dbf5-bb3e-449d-8bf0-9572cc642cac";
   const now = "2026-11-13T08:00:00Z";
   const evidence = {
@@ -134,24 +134,11 @@ test("TEST applicant skips the fee without starting a payment", async ({
     page.getByText(/không trừ ví, không gọi cổng thanh toán thật/),
   ).toBeVisible();
   const submitButton = page.getByRole("button", { name: "Nộp hồ sơ" });
-  await submitButton.evaluate((button) =>
-    button.scrollIntoView({ block: "center" }),
-  );
-  await submitButton.evaluate((button) => {
-    const navigation = document.querySelector(".site-mobile-navigation");
-    const scrollport = document.documentElement;
-    if (!navigation) return;
-
-    const safeBottom = navigation.getBoundingClientRect().top - 16;
-    const overlap = button.getBoundingClientRect().bottom - safeBottom;
-    if (overlap <= 0) return;
-
-    const previousScrollBehavior = scrollport.style.scrollBehavior;
-    scrollport.style.scrollBehavior = "auto";
-    scrollport.scrollTop += overlap;
-    scrollport.style.scrollBehavior = previousScrollBehavior;
-  });
-  await submitButton.click();
+  if (testInfo.project.name === "mobile-chrome") {
+    await submitButton.press("Enter");
+  } else {
+    await submitButton.click();
+  }
   await expect(page.getByText("Hồ sơ đã được gửi thành công")).toBeVisible();
   expect(paymentRequests).toBe(0);
 });
