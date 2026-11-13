@@ -1949,6 +1949,7 @@ const server = createServer(async (request, response) => {
       slug: null,
       summary: "Hồ sơ sẵn sàng thanh toán phí xác lập.",
       status: "APPROVED",
+      submissionFeePolicyMode: "LEGACY",
       visibility: "PRIVATE",
       currentVersionNo: 1,
       submittedAt: "2026-07-31T08:00:00Z",
@@ -2402,7 +2403,8 @@ const server = createServer(async (request, response) => {
       response,
       200,
       envelope(
-        dossier?.status === "APPROVED"
+        dossier?.status === "APPROVED" &&
+          dossier?.submissionFeePolicyMode === "LEGACY"
           ? [
               {
                 dossierId: dossier.id,

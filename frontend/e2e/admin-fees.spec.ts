@@ -77,12 +77,12 @@ test("Admin reviews and schedules a global submission fee", async ({
   await page.getByRole("button", { name: "Tạo bản nháp" }).click();
 
   await expect(page.getByText("Xem lại trước khi kích hoạt")).toBeVisible();
-  await expect(page.getByText("5.000.000 ₫")).toBeVisible();
+  await expect(page.getByText("5.000.000 ₫", { exact: true })).toBeVisible();
   const confirm = page.getByRole("button", { name: "Xác nhận kích hoạt" });
   await expect(confirm).toBeDisabled();
   await page.getByRole("checkbox").check();
   await expect(confirm).toBeEnabled();
   await confirm.click();
-  await expect(page.getByText("5.000.000 ₫").first()).toBeVisible();
+  await expect(page.getByText("5.000.000 ₫", { exact: true })).toBeVisible();
   await expect(page.getByText("Đã lên lịch").first()).toBeVisible();
 });

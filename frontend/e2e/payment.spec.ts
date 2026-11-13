@@ -45,6 +45,7 @@ test("admin charges a funded wallet and applicant sees fee confirmation", async 
     },
   ]);
   await page.goto("/admin/payments");
+  await page.getByText("Giao dịch và đối soát hồ sơ legacy").click();
   const dossierField = page.getByLabel("Hồ sơ đã phê duyệt");
   const amountField = page.getByLabel("Số phí cần thu (đồng)");
   await expect(dossierField).toBeVisible();

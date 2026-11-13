@@ -53,3 +53,8 @@ Apply migrations only through the normal release process after staging verificat
 - `npm run typecheck` remains blocked at Next type generation by Windows `EPERM` writes to `.next/types/routes.d.ts` and `tsconfig.json`. `npm run build` was blocked creating the configured Next build directory. Playwright could not start its Next dev server because Windows denied writes to the configured dist directory; its flows did not reach assertions.
 - No authenticated staging configuration or database credentials were available. Migration state and responsive browser journeys were not verified against staging. The public site was only inspected read-only; its admin route redirected to login.
 - No migration was applied, and no commit, real invitation, payment, production configuration change, or deployment occurred.
+
+## E2E CI follow-up — 2026-11-13
+
+- The first CI run after `baed293` completed 120 tests, skipped 9, and failed two browser tests. The fee test used a non-unique text locator; it now matches the exact amount. The legacy payment test queried a form inside a collapsed disclosure; it now opens the section, and its reset fixture explicitly marks the approved dossier as `LEGACY`.
+- The two affected desktop browser tests pass locally together (2/2). The complete E2E matrix was not rerun locally; CI had passed the other 120 tests in the reported run.
