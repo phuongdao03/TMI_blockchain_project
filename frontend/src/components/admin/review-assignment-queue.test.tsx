@@ -154,6 +154,9 @@ describe("ReviewAssignmentQueue", () => {
 
     renderQueue("dossier-1");
 
+    await user.click(
+      await screen.findByRole("button", { name: "Phân công người thẩm định" }),
+    );
     await screen.findByRole("option", { name: "reviewer@cns.vn" });
     await user.selectOptions(
       await screen.findByLabelText("Người kiểm duyệt"),
@@ -202,6 +205,9 @@ describe("ReviewAssignmentQueue", () => {
 
     renderQueue("dossier-1");
 
+    await user.click(
+      await screen.findByRole("button", { name: "Phân công người thẩm định" }),
+    );
     await screen.findByRole("option", { name: "reviewer@cns.vn" });
     await user.selectOptions(
       await screen.findByLabelText("Người kiểm duyệt"),
@@ -260,6 +266,9 @@ describe("ReviewAssignmentQueue", () => {
     const user = userEvent.setup();
 
     renderQueue("dossier-1");
+    await user.click(
+      await screen.findByRole("button", { name: "Phân công người thẩm định" }),
+    );
     await screen.findByRole("option", { name: "reviewer@cns.vn" });
     await user.selectOptions(
       await screen.findByLabelText("Người kiểm duyệt"),

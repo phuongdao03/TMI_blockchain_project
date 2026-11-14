@@ -64,14 +64,12 @@ it("guides the reviewer before and after submitting a report", async () => {
     </QueryClientProvider>,
   );
 
-  expect(await screen.findByRole("link", { name: "Tài liệu" })).toHaveProperty(
-    "href",
-    expect.stringContaining("#review-evidence"),
+  await user.click(
+    await screen.findByRole("button", { name: "Tài liệu hồ sơ" }),
   );
-  expect(screen.getByRole("link", { name: "Phiếu thẩm định" })).toHaveProperty(
-    "href",
-    expect.stringContaining("#review-scorecard"),
-  );
+  expect(screen.getByText("Bằng chứng")).toBeDefined();
+  expect(screen.queryByRole("button", { name: "Gửi kết quả" })).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Phiếu thẩm định" }));
   await user.click(screen.getByRole("button", { name: "Gửi kết quả" }));
 
   expect(await screen.findByText("Đã gửi báo cáo thẩm định")).toBeTruthy();
@@ -124,8 +122,8 @@ it("lets an assigned reviewer confirm no conflict and continue to the report", a
     hasConflict: false,
   });
   expect(
-    await screen.findByRole("link", { name: "Phiếu thẩm định" }),
-  ).toHaveProperty("href", expect.stringContaining("#review-scorecard"));
+    await screen.findByRole("button", { name: "Phiếu thẩm định" }),
+  ).toHaveProperty("ariaPressed", "true");
 });
 
 it("requires a reason before declaring a conflict", async () => {

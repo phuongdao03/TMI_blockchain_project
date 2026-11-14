@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { FiveTScorecard } from "@/components/reviews/five-t-scorecard";
 
 describe("FiveTScorecard", () => {
-  it("uses evidence-based conclusions without a numeric total for new rubrics", () => {
+  it("uses evidence-based conclusions without a numeric total for new rubrics", async () => {
     render(
       <FiveTScorecard
         evidences={[]}
@@ -31,7 +31,12 @@ describe("FiveTScorecard", () => {
       />,
     );
 
-    expect(screen.getByText("Kết luận theo tiêu chí")).toBeDefined();
+    await userEvent.click(
+      screen.getByRole("button", { name: "Đánh giá từng tiêu chí" }),
+    );
+    expect(
+      screen.getByRole("heading", { name: "Đánh giá từng tiêu chí" }),
+    ).toBeDefined();
     expect(
       screen.getByRole("radio", { name: "Thông tin chủ thể: Đáp ứng" }),
     ).toBeDefined();
@@ -66,6 +71,9 @@ describe("FiveTScorecard", () => {
     );
 
     await user.click(
+      screen.getByRole("button", { name: "Đánh giá từng tiêu chí" }),
+    );
+    await user.click(
       screen.getByRole("radio", { name: "Thông tin chủ thể: Đáp ứng" }),
     );
     await user.type(
@@ -79,7 +87,9 @@ describe("FiveTScorecard", () => {
     expect(screen.getByRole("alert").textContent).toContain(
       "Thông tin chủ thể: nhận định cần ít nhất 20 ký tự",
     );
-    expect(document.activeElement).toBe(screen.getAllByRole("textbox")[0]);
+    await vi.waitFor(() =>
+      expect(document.activeElement).toBe(screen.getAllByRole("textbox")[0]),
+    );
   });
 
   it("does not claim a failed autosave was persisted", () => {
@@ -161,6 +171,9 @@ describe("FiveTScorecard", () => {
       "VALID",
     );
     await user.click(
+      screen.getByRole("button", { name: "Đánh giá từng tiêu chí" }),
+    );
+    await user.click(
       screen.getByRole("radio", { name: "Tài liệu chứng minh: Cần bổ sung" }),
     );
     await user.type(
@@ -168,8 +181,9 @@ describe("FiveTScorecard", () => {
       "Tài liệu cần bổ sung ngày phát hành để có thể đối chiếu.",
     );
     await user.click(screen.getByRole("checkbox"));
+    await user.click(screen.getByRole("button", { name: "Báo cáo" }));
     await user.type(
-      screen.getByLabelText("Phản hồi gửi người nộp"),
+      screen.getByLabelText("Nội dung gửi người nộp"),
       "Vui lòng bổ sung ngày phát hành của tài liệu.",
     );
 
@@ -229,6 +243,9 @@ describe("FiveTScorecard", () => {
       />,
     );
 
+    await user.click(
+      screen.getByRole("button", { name: "Điều kiện tiếp nhận" }),
+    );
     await user.type(
       screen.getByLabelText("Căn cứ Phạm vi tiếp nhận"),
       "Đang xem",
@@ -290,9 +307,10 @@ describe("FiveTScorecard", () => {
       .getByText("02 · Tính minh bạch")
       .closest("details");
     expect(firstCriterion?.open).toBe(true);
-    expect(secondCriterion?.open).toBe(false);
-    await user.click(secondCriterion?.querySelector("summary") as HTMLElement);
-    expect(secondCriterion?.open).toBe(true);
+    expect(secondCriterion?.hidden).toBe(true);
+    await user.click(screen.getByRole("button", { name: "Tính minh bạch" }));
+    expect(secondCriterion?.hidden).toBe(false);
+    await user.click(screen.getByRole("button", { name: "Tính đúng đắn" }));
     expect(
       screen.getByText(
         "Tiếp theo: Chấm điểm và nhận xét tiêu chí Tính đúng đắn",
@@ -312,19 +330,25 @@ describe("FiveTScorecard", () => {
       "Tính tôn trọng",
     ];
     for (const criterion of criteria) {
+      await user.click(screen.getByRole("button", { name: criterion }));
       const score = screen.getByLabelText(`Điểm ${criterion}`);
       fireEvent.change(score, { target: { value: "16" } });
       fireEvent.change(screen.getByLabelText(`Nhận xét ${criterion}`), {
         target: { value: `Nhận xét đầy đủ cho ${criterion}.` },
       });
+      for (const checkbox of screen.getAllByRole("checkbox"))
+        await user.click(checkbox);
     }
+    await user.click(screen.getByRole("button", { name: "Báo cáo" }));
     for (const checkbox of screen.getAllByRole("checkbox")) {
       await user.click(checkbox);
     }
+    await user.click(screen.getByRole("button", { name: "Kiểm tra tài liệu" }));
     await user.selectOptions(
       screen.getByLabelText("Kết quả kiểm tra Bằng chứng nguồn gốc"),
       "VALID",
     );
+    await user.click(screen.getByRole("button", { name: "Báo cáo" }));
     await user.selectOptions(screen.getByLabelText("Kiến nghị"), "APPROVE");
 
     await vi.waitFor(() => expect(save).toHaveBeenCalled(), {

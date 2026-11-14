@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import type {
   ReviewEvidenceSnapshot,
   ReviewGateAnswer,
@@ -89,6 +91,10 @@ export function SpecialistRubricSection({
   ) => void;
   readOnly: boolean;
 }) {
+  const [selectedGate, setSelectedGate] = useState(rubric.gates[0]?.key ?? "");
+  const [selectedCriterion, setSelectedCriterion] = useState(
+    rubric.criteria[0]?.key ?? "",
+  );
   const total = specialistScore(rubric, specialistAnswers);
   return (
     <section className="space-y-5" id="specialist-rubric">
@@ -109,6 +115,20 @@ export function SpecialistRubricSection({
       {rubric.gates.length > 0 ? (
         <div className="space-y-3">
           <h4 className="font-bold">A. Điều kiện bắt buộc</h4>
+          <label className="block text-sm font-semibold">
+            Chọn điều kiện
+            <select
+              className="mt-2 min-h-11 w-full rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3"
+              value={selectedGate}
+              onChange={(event) => setSelectedGate(event.target.value)}
+            >
+              {rubric.gates.map((gate) => (
+                <option key={gate.key} value={gate.key}>
+                  {gate.label}
+                </option>
+              ))}
+            </select>
+          </label>
           {rubric.gates.map((gate) => {
             const answer = gateAnswers[gate.key] ?? {
               outcome: "UNASSESSED",
@@ -119,6 +139,7 @@ export function SpecialistRubricSection({
               <fieldset
                 className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-elevated)] p-4"
                 disabled={readOnly}
+                hidden={gate.key !== selectedGate}
                 key={gate.key}
               >
                 <legend className="px-1 font-bold">
@@ -183,6 +204,23 @@ export function SpecialistRubricSection({
 
       <div className="space-y-3">
         <h4 className="font-bold">B. Tiêu chí theo loại hồ sơ</h4>
+        <label className="block text-sm font-semibold">
+          Chọn tiêu chí chuyên biệt
+          <select
+            className="mt-2 min-h-11 w-full rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3"
+            value={selectedCriterion}
+            onChange={(event) => setSelectedCriterion(event.target.value)}
+          >
+            {rubric.criteria.map((criterion) => (
+              <option key={criterion.key} value={criterion.key}>
+                {criterion.label} ·{" "}
+                {specialistAnswers[criterion.key]?.rationale
+                  ? "Đã nhập nhận định"
+                  : "Chưa đánh giá"}
+              </option>
+            ))}
+          </select>
+        </label>
         {rubric.criteria.map((criterion, index) => {
           const answer = specialistAnswers[criterion.key] ?? {
             score: 0,
@@ -193,6 +231,7 @@ export function SpecialistRubricSection({
             <fieldset
               className="rounded-xl border border-[var(--theme-border)] bg-[var(--theme-elevated)] p-4"
               disabled={readOnly}
+              hidden={criterion.key !== selectedCriterion}
               key={criterion.key}
             >
               <legend className="px-1 font-bold">

@@ -464,6 +464,11 @@ async def save_review_draft(
                 for media_id, value in payload.evidence_assessments.items()
             },
         ),
+        **(
+            {"expected_draft_token": request.headers["x-review-draft-token"]}
+            if "x-review-draft-token" in request.headers
+            else {}
+        ),
     )
     return SuccessEnvelope(
         data=_review_data(result),

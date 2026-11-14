@@ -48,12 +48,18 @@ test("reviewer distinguishes relevance, incomplete verification and contradictio
     name: "Căn cứ quyền sử dụng nhãn hiệu: Đáp ứng",
     exact: true,
   });
+  await page
+    .getByRole("button", { name: "Đánh giá từng tiêu chí", exact: true })
+    .click();
   await meets.focus();
   await meets.press("Space");
   await expect(meets).toBeChecked();
   await expect(
     page.getByRole("radio", { name: /: Không áp dụng/ }),
   ).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "Kiểm tra tài liệu", exact: true })
+    .click();
   await verification.selectOption("PARTIAL");
   await page.getByRole("button", { name: "Gửi kết quả thẩm định" }).click();
   await expect(
@@ -62,6 +68,9 @@ test("reviewer distinguishes relevance, incomplete verification and contradictio
   await expect(page.getByRole("button", { name: "Xác nhận gửi" })).toHaveCount(
     0,
   );
+  await page
+    .getByRole("button", { name: "Kiểm tra tài liệu", exact: true })
+    .click();
   for (const [label, value] of [
     ["Phương pháp đối chiếu", "So sánh với hồ sơ lưu trữ gốc"],
     ["Nguồn đối chiếu", "Kho lưu trữ, mục 2024, trang 3"],
@@ -72,13 +81,22 @@ test("reviewer distinguishes relevance, incomplete verification and contradictio
       .getByRole("textbox", { name: `${label} — ${title}` })
       .fill(value!);
   await page
+    .getByRole("button", { name: "Đánh giá từng tiêu chí", exact: true })
+    .click();
+  await page
     .getByLabel("Nhận định Căn cứ quyền sử dụng nhãn hiệu")
     .fill("Đã đối chiếu chủ thể và thời điểm với nguồn lưu trữ được cung cấp.");
   await page
     .locator("#review-criterion-ownership_basis")
     .getByRole("checkbox")
     .check();
+  await page
+    .getByRole("button", { name: "Kiểm tra tài liệu", exact: true })
+    .click();
   await verification.selectOption("CONTRADICTED");
+  await page
+    .getByRole("button", { name: "Đánh giá từng tiêu chí", exact: true })
+    .click();
   await expect(
     page.getByText(/minh chứng còn thiếu căn cứ hoặc mâu thuẫn/).first(),
   ).toBeVisible();

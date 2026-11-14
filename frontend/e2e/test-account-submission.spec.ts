@@ -80,8 +80,19 @@ test("existing USER with the scoped exemption submits without a payment", async 
     })),
   );
 
+  let submitted = false;
+  const tracked = {
+    ...dossier,
+    status: "SUBMITTED",
+    canEdit: false,
+    currentVersionNo: 1,
+    submittedAt: now,
+    submissionFeePolicyMode: "DYNAMIC",
+    submissionFeeWaivedAt: now,
+    submissionFeeTestExempted: true,
+  };
   await page.route(`**/api/v1/dossiers/${id}`, (route) =>
-    route.fulfill({ json: envelope(dossier) }),
+    route.fulfill({ json: envelope(submitted ? tracked : dossier) }),
   );
   await page.route(`**/api/v1/dossiers/${id}/versions`, (route) =>
     route.fulfill({ json: envelope([]) }),
@@ -122,9 +133,10 @@ test("existing USER with the scoped exemption submits without a payment", async 
     );
     expect(route.request().headers()["x-test-payment-mode"]).toBeUndefined();
     expect(route.request().headers()["x-fee-policy-version"]).toBeUndefined();
+    submitted = true;
     await route.fulfill({
       json: envelope({
-        dossier: { ...dossier, status: "SUBMITTED", canEdit: false },
+        dossier: tracked,
         version: { id: "version-test", submittedAt: now },
       }),
     });
@@ -166,6 +178,34 @@ test("existing USER with the scoped exemption submits without a payment", async 
   } else {
     await submitButton.click();
   }
-  await expect(page.getByText("Hồ sơ đã được gửi thành công")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Tổng quan hồ sơ" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("navigation", { name: "Các bước hoàn thiện hồ sơ" }),
+  ).toHaveCount(0);
+  await page.getByText("Xem toàn bộ tiến độ", { exact: true }).click();
+  await expect(
+    page.getByText("Được miễn phí kiểm thử", { exact: true }),
+  ).toBeVisible();
+  for (const width of [320, 375, 390, 768, 1024, 1440]) {
+    await page.setViewportSize({ width, height: 960 });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await page.screenshot({
+      path: testInfo.outputPath(`submitted-progress-${width}.png`),
+      fullPage: true,
+    });
+  }
+  await page
+    .getByRole("button", { name: "Tài liệu đã nộp", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Xem tệp", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: /Xóa/ })).toHaveCount(0);
   expect(paymentRequests).toBe(0);
 });

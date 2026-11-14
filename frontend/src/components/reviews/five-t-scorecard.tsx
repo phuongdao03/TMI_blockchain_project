@@ -32,6 +32,7 @@ import {
   scoreBand,
   scoreBands,
 } from "@/components/reviews/five-t-rubric";
+import { TaskNavigation } from "@/components/ui/task-navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
@@ -291,6 +292,10 @@ function ScoredReviewForm({
   rubric?: ReviewRubric;
   saveError?: Error | null;
 }) {
+  const [task, setTask] = useState("criteria");
+  const [activeCriterion, setActiveCriterion] = useState<string>(
+    criteria[0]!.key,
+  );
   const initialValues = useMemo(() => defaults(initialReview), [initialReview]);
   const [criterionEvidence, setCriterionEvidence] = useState<CriterionEvidence>(
     () => evidenceDefaults(initialReview),
@@ -346,7 +351,11 @@ function ScoredReviewForm({
     evidenceAssessments,
     values,
   ]);
-  useReviewAutosave({ draft: autosaveDraft, onSave, readOnly });
+  const autosave = useReviewAutosave({
+    draft: autosaveDraft,
+    onSave,
+    readOnly,
+  });
 
   const current = draftSchema.safeParse(values);
   const total = current.success
@@ -428,7 +437,7 @@ function ScoredReviewForm({
     try {
       // The submit endpoint intentionally only accepts an already persisted draft.
       // Save this exact validated snapshot before asking for final confirmation.
-      await onSave(draft);
+      await autosave.save(draft);
       setCompletionError("");
       setConfirmOpen(true);
     } catch {
@@ -461,12 +470,27 @@ function ScoredReviewForm({
           </div>
         </div>
         <form className="space-y-6 p-5 sm:p-8">
-          <ReviewEvidenceAssessments
-            assessments={evidenceAssessments}
-            evidences={evidences}
-            onChange={setEvidenceAssessments}
-            readOnly={readOnly}
+          <TaskNavigation
+            label="Công việc thẩm định 5T"
+            value={task}
+            onChange={setTask}
+            items={[
+              { id: "documents", label: "Kiểm tra tài liệu" },
+              { id: "criteria", label: "Tiêu chí 5T" },
+              ...(rubric
+                ? [{ id: "specialist", label: "Tiêu chí chuyên biệt" }]
+                : []),
+              { id: "report", label: "Báo cáo" },
+            ]}
           />
+          <div hidden={task !== "documents"}>
+            <ReviewEvidenceAssessments
+              assessments={evidenceAssessments}
+              evidences={evidences}
+              onChange={setEvidenceAssessments}
+              readOnly={readOnly}
+            />
+          </div>
           <section
             aria-label="Tiến độ phiếu thẩm định"
             className="border-y border-[var(--theme-border)] py-4"
@@ -514,31 +538,11 @@ function ScoredReviewForm({
                 style={{ width: `${(completedCriteria / 5) * 100}%` }}
               />
             </div>
-            <nav
-              aria-label="Đi tới phần của phiếu"
-              className="mt-4 flex gap-2 overflow-x-auto pb-1 text-xs font-bold"
-            >
-              <a
-                className="whitespace-nowrap py-2 text-[var(--theme-accent)]"
-                href="#review-criteria"
-              >
-                Tiêu chí 5T
-              </a>
-              <a
-                className="whitespace-nowrap py-2 text-[var(--theme-accent)]"
-                href="#review-findings"
-              >
-                Phát hiện
-              </a>
-              <a
-                className="whitespace-nowrap py-2 text-[var(--theme-accent)]"
-                href="#review-decision"
-              >
-                Kiến nghị & gửi
-              </a>
-            </nav>
           </section>
-          <section className="border-b border-[var(--theme-border)] pb-5">
+          <section
+            hidden={task !== "criteria"}
+            className="border-b border-[var(--theme-border)] pb-5"
+          >
             <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary-700">
@@ -570,267 +574,291 @@ function ScoredReviewForm({
             </div>
           </section>
           <div id="review-criteria" />
-          {rubric ? (
-            <SpecialistRubricSection
-              evidences={evidences}
-              gateAnswers={gateAnswers}
-              onGateChange={setGateAnswers}
-              onSpecialistChange={setSpecialistAnswers}
-              readOnly={readOnly}
-              rubric={rubric}
-              specialistAnswers={specialistAnswers}
+          <div hidden={task !== "specialist"}>
+            {rubric ? (
+              <SpecialistRubricSection
+                evidences={evidences}
+                gateAnswers={gateAnswers}
+                onGateChange={setGateAnswers}
+                onSpecialistChange={setSpecialistAnswers}
+                readOnly={readOnly}
+                rubric={rubric}
+                specialistAnswers={specialistAnswers}
+              />
+            ) : null}
+          </div>
+          <div hidden={task !== "criteria"}>
+            <TaskNavigation
+              label="Danh sách tiêu chí 5T"
+              value={activeCriterion}
+              onChange={setActiveCriterion}
+              items={criteria.map((criterion) => ({
+                id: criterion.key,
+                label: criterion.label,
+              }))}
             />
-          ) : null}
-          {criteria.map(
-            ({ indicators, key, label, purpose, scoreKey }, index) => {
-              const band = scoreBand(values[scoreKey]);
-              const assessed =
-                values[scoreKey] !== null &&
-                values[scoreKey] !== undefined &&
-                (values.criterionComments?.[key]?.trim().length ?? 0) >= 20 &&
-                criterionEvidence[key].length > 0;
-              return (
-                <details
-                  className="overflow-hidden rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-elevated)]"
-                  key={key}
-                  open={readOnly || index === 0}
-                >
-                  <summary className="flex min-h-14 cursor-pointer items-center justify-between gap-3 px-4 py-3 text-sm font-bold sm:px-5">
-                    <span>
-                      {String(index + 1).padStart(2, "0")} · {label}
-                    </span>
-                    <span
-                      className={
-                        assessed
-                          ? "text-emerald-700"
-                          : "text-[var(--theme-muted)]"
-                      }
-                    >
-                      {assessed ? "Đã hoàn thành" : "Cần chấm"}
-                    </span>
-                  </summary>
-                  <fieldset
-                    className="grid gap-4 border-t border-[var(--theme-border)] p-4 sm:grid-cols-[minmax(0,1fr)_8.5rem] sm:p-5"
-                    disabled={readOnly}
+            {criteria.map(
+              ({ indicators, key, label, purpose, scoreKey }, index) => {
+                const band = scoreBand(values[scoreKey]);
+                const assessed =
+                  values[scoreKey] !== null &&
+                  values[scoreKey] !== undefined &&
+                  (values.criterionComments?.[key]?.trim().length ?? 0) >= 20 &&
+                  criterionEvidence[key].length > 0;
+                return (
+                  <details
+                    className="overflow-hidden rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-elevated)]"
+                    key={key}
+                    hidden={activeCriterion !== key}
+                    open
                   >
-                    <div>
-                      <legend className="font-bold text-neutral-950">
-                        <span className="mr-2 text-primary-700">
-                          {String(index + 1).padStart(2, "0")}
-                        </span>
-                        {label}
-                      </legend>
-                      <p className="mt-1 text-xs leading-5 text-neutral-500">
-                        {purpose}
-                      </p>
-                      <ul
-                        className="mt-3 flex flex-wrap gap-2"
-                        aria-label={`Chỉ báo ${label}`}
-                      >
-                        {indicators.map((indicator) => (
-                          <li
-                            className="rounded-full border border-[var(--theme-border)] bg-[var(--theme-surface)] px-2.5 py-1 text-xs text-neutral-600"
-                            key={indicator}
-                          >
-                            {indicator}
-                          </li>
-                        ))}
-                      </ul>
-                      <label
-                        className="mt-4 block text-xs font-bold uppercase tracking-wider text-neutral-600"
-                        htmlFor={"comment-" + key}
-                      >
-                        Nhận xét {label}
-                      </label>
-                      <textarea
-                        className="mt-2 min-h-28 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-3 text-sm disabled:opacity-60"
-                        id={"comment-" + key}
-                        maxLength={2_000}
-                        {...register(`criterionComments.${key}` as const)}
-                      />
-                      <p className="mt-2 text-xs text-neutral-500">
-                        Nêu nhận định, căn cứ đã kiểm tra và điểm còn giới hạn;
-                        tối thiểu 20 ký tự.
-                      </p>
-                      <ReviewEvidenceSelect
-                        disabled={readOnly}
-                        evidences={evidences}
-                        label={label}
-                        onChange={(next) =>
-                          setCriterionEvidence((currentEvidence) => ({
-                            ...currentEvidence,
-                            [key]: next,
-                          }))
+                    <summary className="flex min-h-14 cursor-pointer items-center justify-between gap-3 px-4 py-3 text-sm font-bold sm:px-5">
+                      <span>
+                        {String(index + 1).padStart(2, "0")} · {label}
+                      </span>
+                      <span
+                        className={
+                          assessed
+                            ? "text-emerald-700"
+                            : "text-[var(--theme-muted)]"
                         }
-                        value={criterionEvidence[key]}
-                      />
-                    </div>
-                    <div>
-                      <label
-                        className="text-xs font-bold uppercase tracking-wider text-neutral-600"
-                        htmlFor={"score-" + key}
                       >
-                        Điểm {label}
-                      </label>
-                      <input
-                        className="mt-2 h-14 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 text-center text-2xl font-bold tabular-nums disabled:opacity-60"
-                        id={"score-" + key}
-                        inputMode="numeric"
-                        max={20}
-                        min={0}
-                        type="number"
-                        {...register(scoreKey, {
-                          setValueAs: (value) =>
-                            value === "" ? null : Number(value),
-                        })}
-                      />
-                      {errors[scoreKey]?.message ? (
-                        <p className="mt-2 text-xs font-semibold text-red-700">
-                          {errors[scoreKey]?.message}
-                        </p>
-                      ) : null}
-                      {band ? (
-                        <div className="mt-3 rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] p-2 text-center">
-                          <strong className="block text-xs text-primary-800">
-                            {band.label}
-                          </strong>
-                          <span className="mt-1 block text-[11px] leading-4 text-neutral-500">
-                            {band.description}
+                        {assessed ? "Đã hoàn thành" : "Cần chấm"}
+                      </span>
+                    </summary>
+                    <fieldset
+                      className="grid gap-4 border-t border-[var(--theme-border)] p-4 sm:grid-cols-[minmax(0,1fr)_8.5rem] sm:p-5"
+                      disabled={readOnly}
+                    >
+                      <div>
+                        <legend className="font-bold text-neutral-950">
+                          <span className="mr-2 text-primary-700">
+                            {String(index + 1).padStart(2, "0")}
                           </span>
-                        </div>
-                      ) : null}
-                    </div>
-                  </fieldset>
-                </details>
-              );
-            },
-          )}
-
-          <div id="review-findings">
-            <ReviewFindingsEditor
-              disabled={readOnly}
-              evidences={evidences}
-              onChange={setFindings}
-              value={findings}
-            />
+                          {label}
+                        </legend>
+                        <p className="mt-1 text-xs leading-5 text-neutral-500">
+                          {purpose}
+                        </p>
+                        <ul
+                          className="mt-3 flex flex-wrap gap-2"
+                          aria-label={`Chỉ báo ${label}`}
+                        >
+                          {indicators.map((indicator) => (
+                            <li
+                              className="rounded-full border border-[var(--theme-border)] bg-[var(--theme-surface)] px-2.5 py-1 text-xs text-neutral-600"
+                              key={indicator}
+                            >
+                              {indicator}
+                            </li>
+                          ))}
+                        </ul>
+                        <label
+                          className="mt-4 block text-xs font-bold uppercase tracking-wider text-neutral-600"
+                          htmlFor={"comment-" + key}
+                        >
+                          Nhận xét {label}
+                        </label>
+                        <textarea
+                          className="mt-2 min-h-28 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-3 text-sm disabled:opacity-60"
+                          id={"comment-" + key}
+                          maxLength={2_000}
+                          {...register(`criterionComments.${key}` as const)}
+                        />
+                        <p className="mt-2 text-xs text-neutral-500">
+                          Nêu nhận định, căn cứ đã kiểm tra và điểm còn giới
+                          hạn; tối thiểu 20 ký tự.
+                        </p>
+                        <ReviewEvidenceSelect
+                          disabled={readOnly}
+                          evidences={evidences}
+                          label={label}
+                          onChange={(next) =>
+                            setCriterionEvidence((currentEvidence) => ({
+                              ...currentEvidence,
+                              [key]: next,
+                            }))
+                          }
+                          value={criterionEvidence[key]}
+                        />
+                      </div>
+                      <div>
+                        <label
+                          className="text-xs font-bold uppercase tracking-wider text-neutral-600"
+                          htmlFor={"score-" + key}
+                        >
+                          Điểm {label}
+                        </label>
+                        <input
+                          className="mt-2 h-14 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 text-center text-2xl font-bold tabular-nums disabled:opacity-60"
+                          id={"score-" + key}
+                          inputMode="numeric"
+                          max={20}
+                          min={0}
+                          type="number"
+                          {...register(scoreKey, {
+                            setValueAs: (value) =>
+                              value === "" ? null : Number(value),
+                          })}
+                        />
+                        {errors[scoreKey]?.message ? (
+                          <p className="mt-2 text-xs font-semibold text-red-700">
+                            {errors[scoreKey]?.message}
+                          </p>
+                        ) : null}
+                        {band ? (
+                          <div className="mt-3 rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] p-2 text-center">
+                            <strong className="block text-xs text-primary-800">
+                              {band.label}
+                            </strong>
+                            <span className="mt-1 block text-[11px] leading-4 text-neutral-500">
+                              {band.description}
+                            </span>
+                          </div>
+                        ) : null}
+                      </div>
+                    </fieldset>
+                  </details>
+                );
+              },
+            )}
           </div>
+          <div hidden={task !== "report"}>
+            <div id="review-findings">
+              <ReviewFindingsEditor
+                disabled={readOnly}
+                evidences={evidences}
+                onChange={setFindings}
+                value={findings}
+              />
+            </div>
 
-          <div
-            className="grid gap-5 border-t border-[var(--theme-border)] pt-6 md:grid-cols-2"
-            id="review-decision"
-          >
-            <div>
-              <label className="text-sm font-bold" htmlFor="recommendation">
-                Kiến nghị
-              </label>
-              <select
-                className="mt-2 min-h-12 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 text-sm font-semibold disabled:opacity-60"
-                disabled={readOnly}
-                id="recommendation"
-                {...register("recommendation", {
-                  setValueAs: (value) => value || null,
-                })}
-              >
-                <option value="">Chọn kiến nghị</option>
-                <option value="APPROVE">Đề nghị phê duyệt</option>
-                <option value="SUPPLEMENT">Yêu cầu bổ sung</option>
-                <option value="REJECT">Đề nghị từ chối</option>
-              </select>
-              <p className="mt-2 text-xs leading-5 text-neutral-500">
-                Đây là kiến nghị chuyên môn, không phải quyết định cuối cùng.
-              </p>
-            </div>
-            <div>
-              <label className="text-sm font-bold" htmlFor="applicant-feedback">
-                Phản hồi gửi người nộp
-              </label>
-              <textarea
-                className="mt-2 min-h-28 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-3 text-sm disabled:opacity-60"
-                disabled={readOnly}
-                id="applicant-feedback"
-                maxLength={2_000}
-                {...register("applicantFeedback", {
-                  setValueAs: (value) => value || null,
-                })}
-              />
-              <p className="mt-2 text-xs leading-5 text-neutral-500">
-                Bắt buộc từ 50 ký tự khi yêu cầu bổ sung hoặc đề nghị từ chối.
-              </p>
-            </div>
-            <div className="md:col-span-2">
-              <label className="text-sm font-bold" htmlFor="private-note">
-                Ghi chú nội bộ
-              </label>
-              <textarea
-                className="mt-2 min-h-24 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-3 text-sm disabled:opacity-60"
-                disabled={readOnly}
-                id="private-note"
-                maxLength={5_000}
-                {...register("privateNote", {
-                  setValueAs: (value) => value || null,
-                })}
-              />
-            </div>
             <div
-              className={`md:col-span-2 rounded-xl border p-4 ${currentDecisionGate.valid ? "border-emerald-300 bg-emerald-50 text-emerald-950" : "border-amber-300 bg-amber-50 text-amber-950"}`}
-              role="status"
+              className="grid gap-5 border-t border-[var(--theme-border)] pt-6 md:grid-cols-2"
+              id="review-decision"
             >
-              <p className="text-xs font-bold uppercase tracking-wider">
-                Cổng quyết định
-              </p>
-              <p className="mt-1 text-sm font-semibold">
-                {currentDecisionGate.message}
-              </p>
-              <p className="mt-2 text-xs leading-5">
-                Phê duyệt: tổng ≥75, mọi tiêu chí ≥12, không còn phát hiện
-                Cao/Nghiêm trọng. Từ chối: tổng &lt;50 hoặc có phát hiện Nghiêm
-                trọng.
-              </p>
+              <div>
+                <label className="text-sm font-bold" htmlFor="recommendation">
+                  Kiến nghị
+                </label>
+                <select
+                  className="mt-2 min-h-12 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3 text-sm font-semibold disabled:opacity-60"
+                  disabled={readOnly}
+                  id="recommendation"
+                  {...register("recommendation", {
+                    setValueAs: (value) => value || null,
+                  })}
+                >
+                  <option value="">Chọn kiến nghị</option>
+                  <option value="APPROVE">Đề nghị phê duyệt</option>
+                  <option value="SUPPLEMENT">Yêu cầu bổ sung</option>
+                  <option value="REJECT">Đề nghị từ chối</option>
+                </select>
+                <p className="mt-2 text-xs leading-5 text-neutral-500">
+                  Đây là kiến nghị chuyên môn, không phải quyết định cuối cùng.
+                </p>
+              </div>
+              <div>
+                <label
+                  className="text-sm font-bold"
+                  htmlFor="applicant-feedback"
+                >
+                  Phản hồi gửi người nộp
+                </label>
+                <textarea
+                  className="mt-2 min-h-28 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-3 text-sm disabled:opacity-60"
+                  disabled={readOnly}
+                  id="applicant-feedback"
+                  maxLength={2_000}
+                  {...register("applicantFeedback", {
+                    setValueAs: (value) => value || null,
+                  })}
+                />
+                <p className="mt-2 text-xs leading-5 text-neutral-500">
+                  Bắt buộc từ 50 ký tự khi yêu cầu bổ sung hoặc đề nghị từ chối.
+                </p>
+              </div>
+              <div className="md:col-span-2">
+                <label className="text-sm font-bold" htmlFor="private-note">
+                  Ghi chú nội bộ
+                </label>
+                <textarea
+                  className="mt-2 min-h-24 w-full rounded-xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-3 text-sm disabled:opacity-60"
+                  disabled={readOnly}
+                  id="private-note"
+                  maxLength={5_000}
+                  {...register("privateNote", {
+                    setValueAs: (value) => value || null,
+                  })}
+                />
+              </div>
+              <div
+                className={`md:col-span-2 rounded-xl border p-4 ${currentDecisionGate.valid ? "border-emerald-300 bg-emerald-50 text-emerald-950" : "border-amber-300 bg-amber-50 text-amber-950"}`}
+                role="status"
+              >
+                <p className="text-xs font-bold uppercase tracking-wider">
+                  Cổng quyết định
+                </p>
+                <p className="mt-1 text-sm font-semibold">
+                  {currentDecisionGate.message}
+                </p>
+                <p className="mt-2 text-xs leading-5">
+                  Phê duyệt: tổng ≥75, mọi tiêu chí ≥12, không còn phát hiện
+                  Cao/Nghiêm trọng. Từ chối: tổng &lt;50 hoặc có phát hiện
+                  Nghiêm trọng.
+                </p>
+              </div>
             </div>
+
+            <ReviewCompletionChecklist
+              disabled={readOnly}
+              onChange={(key, checked) =>
+                setChecklistAnswers((currentAnswers) => ({
+                  ...currentAnswers,
+                  [key]: checked,
+                }))
+              }
+              value={checklistAnswers}
+            />
+
+            {completionError ? (
+              <p className="text-sm font-semibold text-red-700" role="alert">
+                {completionError}
+              </p>
+            ) : null}
+            {!findings.every(findingComplete) ? (
+              <p className="text-sm font-semibold text-amber-800" role="status">
+                Hoàn tất từng phát hiện để hệ thống có thể lưu phiếu nháp.
+              </p>
+            ) : null}
           </div>
-
-          <ReviewCompletionChecklist
-            disabled={readOnly}
-            onChange={(key, checked) =>
-              setChecklistAnswers((currentAnswers) => ({
-                ...currentAnswers,
-                [key]: checked,
-              }))
-            }
-            value={checklistAnswers}
-          />
-
-          {completionError ? (
-            <p className="text-sm font-semibold text-red-700" role="alert">
-              {completionError}
-            </p>
-          ) : null}
-          {!findings.every(findingComplete) ? (
-            <p className="text-sm font-semibold text-amber-800" role="status">
-              Hoàn tất từng phát hiện để hệ thống có thể lưu phiếu nháp.
-            </p>
-          ) : null}
           <div className="flex flex-col justify-between gap-4 border-t pt-5 sm:flex-row sm:items-center">
             <p
               aria-live="polite"
               className="flex items-center gap-2 text-xs font-semibold text-neutral-500"
               data-testid="review-save-status"
-              role={saveError ? "alert" : "status"}
+              role={
+                saveError || autosave.status === "error" ? "alert" : "status"
+              }
             >
               {readOnly ? (
                 <>
                   <CheckCircle2 className="size-4 text-emerald-600" />
                   Kết quả đã gửi và không thể chỉnh sửa.
                 </>
-              ) : saveError ? (
+              ) : saveError || autosave.status === "error" ? (
                 <>
                   <AlertCircle className="size-4 text-red-700" />
                   Chưa lưu được bản nháp.
                 </>
-              ) : isSaving ? (
+              ) : isSaving ||
+                autosave.status === "pending" ||
+                autosave.status === "saving" ? (
                 <>
                   <LoaderCircle className="size-4 animate-spin" />
-                  Đang lưu thay đổi…
+                  {autosave.status === "pending"
+                    ? "Có thay đổi chưa lưu…"
+                    : "Đang lưu thay đổi…"}
                 </>
               ) : (
                 <>
@@ -839,6 +867,19 @@ function ScoredReviewForm({
                 </>
               )}
             </p>
+            {!readOnly && (saveError || autosave.status === "error") ? (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={!autosaveDraft || isSaving}
+                onClick={() => {
+                  if (autosaveDraft)
+                    void autosave.save(autosaveDraft).catch(() => undefined);
+                }}
+              >
+                Thử lưu lại
+              </Button>
+            ) : null}
             {!readOnly ? (
               <Button
                 disabled={isSaving || isSubmitting}

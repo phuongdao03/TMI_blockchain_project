@@ -45,6 +45,7 @@ class StubScoringService:
         )
         self.review: ReviewView | None = None
         self.received_draft: ReviewDraft | None = None
+        self.expected_token: str | None = None
 
     async def list_assignments(
         self,
@@ -109,7 +110,10 @@ class StubScoringService:
         principal: AuthPrincipal,
         assignment_id: UUID,
         draft: ReviewDraft,
+        *,
+        expected_draft_token: str | None = None,
     ) -> ReviewView:
+        self.expected_token = expected_draft_token
         self.received_draft = draft
         self.review = ReviewView(
             id=uuid4(),
@@ -162,6 +166,7 @@ async def _request(
     path: str,
     *,
     json: dict[str, object] | None = None,
+    headers: dict[str, str] | None = None,
 ) -> httpx.Response:
     principal = _principal()
     app = create_application(
@@ -177,7 +182,7 @@ async def _request(
             transport=transport,
             base_url="http://testserver",
         ) as client:
-            return await client.request(method, path, json=json)
+            return await client.request(method, path, json=json, headers=headers)
 
 
 def test_reviewer_assignment_read_contract() -> None:
@@ -313,3 +318,18 @@ def test_reviewer_can_persist_an_incomplete_rubric_draft() -> None:
         )
 
     asyncio.run(exercise())
+
+
+def test_draft_save_passes_the_optional_concurrency_token() -> None:
+    service = StubScoringService()
+    response = asyncio.run(
+        _request(
+            service,
+            "PUT",
+            f"/api/v1/reviewer/assignments/{service.assignment.id}/draft",
+            json={"privateNote": "Keep concurrent draft safe"},
+            headers={"X-Review-Draft-Token": "new"},
+        )
+    )
+    assert response.status_code == 200
+    assert service.expected_token == "new"

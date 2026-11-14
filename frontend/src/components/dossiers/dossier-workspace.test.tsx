@@ -171,7 +171,9 @@ describe("DossierWorkspace", () => {
       "disabled",
       false,
     );
-    expect(screen.getByText(/Bằng chứng về quyền sử dụng/)).toBeDefined();
+    expect(
+      screen.getByRole("button", { name: "Xem / sửa tài liệu" }),
+    ).toBeDefined();
   });
 
   it("keeps a draft unsubmitted until an active global fee policy exists", async () => {
@@ -381,7 +383,9 @@ describe("DossierWorkspace", () => {
     );
 
     await user.click(screen.getByRole("button", { name: /Kiểm tra & nộp/ }));
-    expect(screen.getByText(/Bằng chứng về quyền sử dụng/)).toBeDefined();
+    expect(
+      screen.getByRole("button", { name: "Xem / sửa tài liệu" }),
+    ).toBeDefined();
     await user.click(screen.getByRole("button", { name: "Nộp hồ sơ" }));
     expect(api.submit.mock.calls[0]?.[0]).toBe(dossier.id);
     expect(api.submit.mock.calls[0]?.[1]).toEqual(expect.any(String));
@@ -389,22 +393,13 @@ describe("DossierWorkspace", () => {
       await screen.findByText("Hồ sơ đã được gửi thành công"),
     ).toBeDefined();
     expect(
-      screen.getByText("Bước tiếp theo: Tinh Hoa Việt kiểm tra hồ sơ của bạn."),
+      screen.getByRole("heading", { name: "Tổng quan hồ sơ" }),
     ).toBeDefined();
-    const nextSteps = screen.getByRole("list", {
-      name: "Các bước sau khi nộp",
-    });
-    expect(within(nextSteps).getByText("1. Đã tiếp nhận")).toBeTruthy();
-    expect(within(nextSteps).getByText("2. Kiểm duyệt hồ sơ")).toBeTruthy();
-    expect(within(nextSteps).getByText("3. Thông báo kết quả")).toBeTruthy();
     expect(
-      screen.getByRole("link", { name: "Xem thông báo" }).getAttribute("href"),
-    ).toBe("/notifications");
-    expect(
-      screen
-        .getByRole("link", { name: "Về hồ sơ của tôi" })
-        .getAttribute("href"),
-    ).toBe("/dossiers");
+      screen.queryByRole("navigation", { name: "Các bước hoàn thiện hồ sơ" }),
+    ).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Tài liệu đã nộp" }));
+    expect(screen.getByRole("button", { name: "Xem tệp" })).toBeDefined();
   });
 
   it("shows the latest supplement request in the next-action panel", async () => {
@@ -594,13 +589,18 @@ describe("DossierWorkspace", () => {
       </QueryClientProvider>,
     );
 
-    expect(await screen.findByText("Hồ sơ đã được gửi.")).toBeDefined();
     expect(
-      document.querySelector(".dossier-state-summary")?.className,
-    ).not.toContain("bg-[var(--theme-elevated)]");
-    expect(screen.getByLabelText("Tên hồ sơ").hasAttribute("disabled")).toBe(
-      true,
+      await screen.findByRole("heading", { name: "Tổng quan hồ sơ" }),
+    ).toBeDefined();
+    expect(
+      screen.queryByRole("navigation", { name: "Các bước hoàn thiện hồ sơ" }),
+    ).toBeNull();
+    expect(screen.queryByLabelText("Tên hồ sơ")).toBeNull();
+    await userEvent.click(
+      screen.getByRole("button", { name: "Tài liệu đã nộp" }),
     );
+    expect(screen.getByRole("button", { name: "Xem tệp" })).toBeDefined();
+    expect(screen.queryByRole("button", { name: /Xóa/ })).toBeNull();
   });
 
   it("uses server document rules to block submission until required evidence exists", async () => {

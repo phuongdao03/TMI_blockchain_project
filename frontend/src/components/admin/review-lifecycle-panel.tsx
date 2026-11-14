@@ -11,6 +11,8 @@ import {
   UserRoundPlus,
 } from "lucide-react";
 import { useState } from "react";
+import { dossierProgress } from "@/components/dossiers/dossier-progress";
+import { DossierWorkflowTimeline } from "@/components/dossiers/dossier-workflow-timeline";
 
 import { ReviewReportDetails } from "@/components/admin/review-report-details";
 import { SupplementRequestsPanel } from "@/components/supplements/supplement-requests-panel";
@@ -85,6 +87,22 @@ function ReviewReport({
   snapshot: ReviewSnapshot;
 }) {
   const { assignment, review, reviewerEmail } = item;
+  const verdictRubric =
+    snapshot.dossier.dossierType?.reviewRubric?.assessmentMethod === "VERDICT";
+  const criteriaCount = verdictRubric
+    ? snapshot.dossier.dossierType!.reviewRubric!.criteria.length
+    : 5;
+  const evaluatedCount = verdictRubric
+    ? Object.values(review?.criterionVerdicts ?? {}).filter(
+        (verdict) => verdict.outcome && verdict.rationale.trim().length >= 20,
+      ).length
+    : [
+        review?.truthScore,
+        review?.transparencyScore,
+        review?.ownershipScore,
+        review?.professionalismScore,
+        review?.respectScore,
+      ].filter((score) => typeof score === "number").length;
   return (
     <article className="border-t border-[var(--theme-border)] py-5 first:border-0">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -93,6 +111,19 @@ function ReviewReport({
           <p className="mt-1 text-sm text-neutral-500">
             {assignmentLabels[assignment.status]}
           </p>
+          {assignment.dueAt ? (
+            <p className="mt-1 text-xs text-[var(--theme-muted)]">
+              Hạn xử lý:{" "}
+              <time dateTime={assignment.dueAt}>
+                {new Date(assignment.dueAt).toLocaleString("vi-VN")}
+              </time>
+            </p>
+          ) : null}
+          {review ? (
+            <p className="mt-1 text-xs text-[var(--theme-muted)]">
+              {evaluatedCount}/{criteriaCount} tiêu chí đã ghi nhận
+            </p>
+          ) : null}
         </div>
         {review?.recommendation ? (
           <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900">
@@ -101,7 +132,10 @@ function ReviewReport({
         ) : null}
       </div>
       {review ? (
-        <>
+        <details className="mt-3">
+          <summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold text-[var(--theme-accent)]">
+            Xem báo cáo thẩm định
+          </summary>
           <dl className="mt-4 grid gap-4 border-t border-[var(--theme-border)] pt-4 md:grid-cols-2">
             {review.totalScore !== null ? (
               <div>
@@ -145,7 +179,7 @@ function ReviewReport({
           {review.submittedAt ? (
             <ReviewReportDetails review={review} snapshot={snapshot} />
           ) : null}
-        </>
+        </details>
       ) : (
         <p className="mt-4 text-sm text-neutral-500">
           Người thẩm định chưa gửi báo cáo. Quản trị viên sẽ nhận thông báo khi
@@ -357,7 +391,11 @@ export function ReviewLifecyclePanel({
 }: {
   dossier: AdminReviewDossierDetail;
 }) {
+  const feeBeforeReview = dossier.workflowProgress
+    ? dossierProgress(dossier.workflowProgress).modern
+    : false;
   const queryClient = useQueryClient();
+  const [assignmentOpen, setAssignmentOpen] = useState(false);
   const [reviewerId, setReviewerId] = useState("");
   const [dueAt, setDueAt] = useState("");
   const [finalReason, setFinalReason] = useState("");
@@ -406,6 +444,7 @@ export function ReviewLifecyclePanel({
     dossier.assignments.map((item) => item.assignment.reviewerUserId),
   );
   const isDecisionReady =
+    dossier.status === "UNDER_REVIEW" &&
     dossier.assignments.length > 0 &&
     dossier.assignments.some((item) => item.review?.submittedAt) &&
     dossier.assignments.every((item) =>
@@ -448,14 +487,26 @@ export function ReviewLifecyclePanel({
 
   return (
     <div className="space-y-5">
-      <SupplementRequestsPanel
-        dossierId={dossier.dossierId}
-        mode="reviewer"
-        versionId={dossier.assignments[0]?.assignment.dossierVersionId}
-        criteria={
-          dossier.snapshotJson.dossier.dossierType?.reviewRubric?.criteria ?? []
-        }
-      />
+      <details>
+        <summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold">
+          Yêu cầu bổ sung hồ sơ
+        </summary>
+        <SupplementRequestsPanel
+          dossierId={dossier.dossierId}
+          mode="reviewer"
+          versionId={dossier.assignments[0]?.assignment.dossierVersionId}
+          criteria={
+            dossier.snapshotJson.dossier.dossierType?.reviewRubric?.criteria ??
+            []
+          }
+        />
+      </details>
+      {dossier.workflowProgress ? (
+        <DossierWorkflowTimeline
+          audience="staff"
+          {...dossier.workflowProgress}
+        />
+      ) : null}
       {!decisionSucceeded ? (
         <WorkflowNextStep
           action={
@@ -501,7 +552,25 @@ export function ReviewLifecyclePanel({
         </div>
 
         {canChooseReviewer ? (
-          <div className="mt-5 grid gap-4 md:grid-cols-2">
+          <button
+            type="button"
+            aria-expanded={assignmentOpen}
+            aria-controls="assignment-composer"
+            className="mt-4 min-h-11 rounded-lg border border-[var(--theme-border)] px-4 text-sm font-semibold"
+            onClick={() => setAssignmentOpen((open) => !open)}
+          >
+            {assignmentOpen
+              ? "Đóng phân công"
+              : needsReviewer
+                ? "Phân công người thẩm định"
+                : "Thêm hoặc thay đổi phân công"}
+          </button>
+        ) : null}
+        {canChooseReviewer && assignmentOpen ? (
+          <div
+            id="assignment-composer"
+            className="mt-5 grid gap-4 md:grid-cols-2"
+          >
             <label className="text-sm font-semibold">
               Người kiểm duyệt
               <select
@@ -626,7 +695,17 @@ export function ReviewLifecyclePanel({
         </section>
       )}
 
-      {dossier.assignments.length > 0 ? (
+      {!isDecisionReady &&
+      !decisionSucceeded &&
+      dossier.status === "UNDER_REVIEW" ? (
+        <p
+          className="border-t border-[var(--theme-border)] py-4 text-sm text-[var(--theme-muted)]"
+          role="status"
+        >
+          Đang chờ báo cáo thẩm định.
+        </p>
+      ) : null}
+      {isDecisionReady || decisionSucceeded ? (
         <section
           className="admin-decision-panel rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-surface)] p-4 sm:p-6"
           id="admin-decision"
@@ -768,14 +847,20 @@ export function ReviewLifecyclePanel({
                 action={
                   activeDecision === "APPROVE"
                     ? {
-                        href: `/admin/payments?dossierId=${encodeURIComponent(dossier.dossierId)}`,
-                        label: "Quyết định phí hồ sơ",
+                        href: feeBeforeReview
+                          ? "/admin/certificates"
+                          : `/admin/payments?dossierId=${encodeURIComponent(dossier.dossierId)}`,
+                        label: feeBeforeReview
+                          ? "Theo dõi bằng xác lập"
+                          : "Quyết định phí hồ sơ",
                       }
                     : { href: "/admin/reviews", label: "Về danh sách hồ sơ" }
                 }
                 description={
                   activeDecision === "APPROVE"
-                    ? "Hồ sơ đã được phê duyệt. Chọn thu phí hoặc miễn phí cho hồ sơ trước khi chuyển sang bước ký xác lập."
+                    ? feeBeforeReview
+                      ? "Hồ sơ đã được phê duyệt. Tiếp tục hoàn thiện bằng xác lập theo các điều kiện nghiệp vụ hiện hành."
+                      : "Hồ sơ đã được phê duyệt. Chọn thu phí hoặc miễn phí cho hồ sơ trước khi chuyển sang bước ký xác lập."
                     : activeDecision === "REQUEST_MORE_INFO"
                       ? "Người gửi cần bổ sung hồ sơ. Theo dõi phiên bản mới trong danh sách hồ sơ chờ thẩm định."
                       : "Kết quả từ chối đã được ghi nhận. Tiếp tục xử lý hồ sơ khác trong danh sách chờ thẩm định."

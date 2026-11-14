@@ -32,6 +32,7 @@ import { SupplementRequestsPanel } from "@/components/supplements/supplement-req
 import { FileUploader } from "@/components/media/file-uploader";
 import { DossierPaymentAction } from "@/components/payments/dossier-payment-action";
 import { PrivateDocumentVerification } from "@/components/documents/private-document-verification";
+import { TaskNavigation } from "@/components/ui/task-navigation";
 import { Button } from "@/components/ui/button";
 import { dossierApi, mediaApi } from "@/lib/api/client";
 import { displayCnsDossierCode } from "@/lib/brand/identifiers";
@@ -40,6 +41,8 @@ import type {
   DossierDocumentRule,
   DossierEvidence,
   DossierStatus,
+  DossierTimelineItem,
+  DossierVersion,
   MediaAsset,
 } from "@/lib/api/types";
 import { dossierKeys } from "@/lib/dossiers/query-keys";
@@ -111,8 +114,8 @@ const dossierGuidance: Record<
     next: "Bạn chưa cần làm gì thêm lúc này.",
   },
   APPROVED: {
-    outcome: "Hồ sơ đã đủ điều kiện phát hành.",
-    next: "Thanh toán phí phát hành để tiếp tục.",
+    outcome: "Hồ sơ đã được phê duyệt.",
+    next: "Theo dõi việc hoàn thiện bằng xác lập và các yêu cầu liên quan.",
   },
   REJECTED: {
     outcome: "Hồ sơ hiện chưa đủ điều kiện.",
@@ -243,7 +246,7 @@ function EvidenceItem({
       </span>
       <div className="min-w-0">
         <h3
-          className="truncate text-sm font-bold text-neutral-950"
+          className="break-words text-sm font-bold text-neutral-950"
           title={evidence.filename ?? evidence.title}
         >
           {evidence.filename ?? evidence.title}
@@ -475,6 +478,195 @@ function InformationStep({
   );
 }
 
+function SubmittedDossier({
+  dossier,
+  history,
+  versions,
+  historyError,
+  versionsError,
+  justSubmitted,
+  showPromotionOptions,
+}: {
+  dossier: DossierDetail;
+  history: readonly DossierTimelineItem[];
+  versions: readonly DossierVersion[];
+  historyError: boolean;
+  versionsError: boolean;
+  justSubmitted: boolean;
+  showPromotionOptions: boolean;
+}) {
+  const [view, setView] = useState("overview");
+  return (
+    <div className="dossier-workspace mx-auto max-w-7xl space-y-5 text-[var(--theme-text)]">
+      {justSubmitted &&
+      ["SUBMITTED", "PAYMENT_PENDING"].includes(dossier.status) ? (
+        <p
+          className="text-sm font-semibold text-[var(--theme-accent)]"
+          role="status"
+        >
+          {dossier.status === "PAYMENT_PENDING"
+            ? "Hoàn tất phí nộp hồ sơ để gửi"
+            : "Hồ sơ đã được gửi thành công"}
+        </p>
+      ) : null}
+      <header>
+        <Link
+          className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[var(--theme-muted)]"
+          href="/dossiers"
+        >
+          <ArrowLeft aria-hidden className="size-4" />
+          Danh sách hồ sơ
+        </Link>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <DossierStatusBadge status={dossier.status} />
+          <span className="break-all text-xs text-[var(--theme-muted)]">
+            {displayCnsDossierCode(dossier.code)}
+          </span>
+        </div>
+        <h1 className="mt-3 break-words text-2xl font-semibold sm:text-4xl">
+          {dossier.title}
+        </h1>
+        {dossier.submittedAt ? (
+          <p className="mt-2 text-sm text-[var(--theme-muted)]">
+            Đã nộp:{" "}
+            <time dateTime={dossier.submittedAt}>
+              {new Date(dossier.submittedAt).toLocaleString("vi-VN")}
+            </time>
+          </p>
+        ) : null}
+        <p className="mt-3 text-sm leading-6">
+          {dossierGuidance[dossier.status].outcome}
+        </p>
+        <p className="mt-1 text-sm font-semibold">
+          {dossierGuidance[dossier.status].next}
+        </p>
+      </header>
+      {dossier.status === "PAYMENT_PENDING" ? (
+        <DossierPaymentAction
+          dossierId={dossier.id}
+          dossierStatus={dossier.status}
+          isTest={dossier.isTest === true}
+          submissionFeeRequired={dossier.submissionFeeRequired}
+          submissionFeePaidAt={dossier.submissionFeePaidAt}
+          submissionFeeWaivedAt={dossier.submissionFeeWaivedAt}
+        />
+      ) : null}
+      <div id="dossier-publication-progress">
+        <DossierWorkflowTimeline {...dossier} history={history} />
+      </div>
+      <TaskNavigation
+        label="Nội dung hồ sơ"
+        value={view}
+        onChange={setView}
+        items={[
+          { id: "overview", label: "Tổng quan" },
+          { id: "documents", label: "Tài liệu đã nộp" },
+          { id: "supplements", label: "Yêu cầu bổ sung" },
+          { id: "history", label: "Lịch sử xử lý" },
+        ]}
+      />
+      <section hidden={view !== "overview"} className="space-y-4">
+        <h2 className="text-lg font-bold">Tổng quan hồ sơ</h2>
+        <p className="whitespace-pre-wrap break-words text-sm leading-6">
+          {dossier.summary || "Chưa có tóm tắt."}
+        </p>
+        <p className="text-sm text-[var(--theme-muted)]">
+          Bạn có thể xem tài liệu và lịch sử tại đây. Chỉnh sửa sẽ mở khi có yêu
+          cầu bổ sung.
+        </p>
+        <DossierClaimsEditor
+          dossierId={dossier.id}
+          initialClaims={dossier.claims}
+          initialRevision={dossier.claimsRevision}
+          criteria={dossier.claimCriteria ?? []}
+          evidences={dossier.evidences}
+          readOnly
+          onSaved={() => undefined}
+          onUnsavedChange={() => undefined}
+        />
+      </section>
+      <section hidden={view !== "documents"} className="space-y-3">
+        <h2 className="text-lg font-bold">
+          Tài liệu đã nộp · {dossier.evidences.length} tệp
+        </h2>
+        {dossier.evidences.map((evidence) => (
+          <EvidenceItem
+            key={evidence.id}
+            canEdit={false}
+            documentTypeLabel={evidenceTypeLabel(dossier, evidence)}
+            evidence={evidence}
+            onRemove={() => undefined}
+          />
+        ))}
+        {!dossier.evidences.length ? (
+          <p className="text-sm text-[var(--theme-muted)]">Chưa có tài liệu.</p>
+        ) : null}
+      </section>
+      <section hidden={view !== "supplements"}>
+        <SupplementRequestsPanel
+          dossierId={dossier.id}
+          mode="applicant"
+          canRespond={false}
+        />
+      </section>
+      <section hidden={view !== "history"} className="space-y-4">
+        <h2 className="text-lg font-bold">Lịch sử xử lý</h2>
+        {historyError ? (
+          <p role="alert">Không thể tải lịch sử. Vui lòng tải lại trang.</p>
+        ) : !history.length ? (
+          <p className="text-sm text-[var(--theme-muted)]">
+            Chưa có thay đổi trạng thái.
+          </p>
+        ) : (
+          <ol className="divide-y divide-[var(--theme-border)]">
+            {history.map((item) => (
+              <li key={item.id} className="py-3 text-sm">
+                <p className="font-semibold">
+                  {dossierStatusLabel(item.toStatus)}
+                </p>
+                {item.note ? (
+                  <p className="mt-1 whitespace-pre-wrap break-words">
+                    {item.note}
+                  </p>
+                ) : null}
+                <time
+                  className="text-xs text-[var(--theme-muted)]"
+                  dateTime={item.createdAt}
+                >
+                  {new Date(item.createdAt).toLocaleString("vi-VN")}
+                </time>
+              </li>
+            ))}
+          </ol>
+        )}
+        <details>
+          <summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold">
+            Các phiên bản hồ sơ ({versions.length})
+          </summary>
+          {versionsError ? (
+            <p role="alert">Không thể tải phiên bản hồ sơ.</p>
+          ) : (
+            versions.map((version) => (
+              <p key={version.id} className="py-2 text-sm">
+                Phiên bản {version.versionNo} ·{" "}
+                {version.submittedAt
+                  ? new Date(version.submittedAt).toLocaleString("vi-VN")
+                  : "Chưa nộp chính thức"}
+              </p>
+            ))
+          )}
+        </details>
+      </section>
+      {showPromotionOptions ? (
+        <DossierPromotionOptions
+          dossierId={dossier.id}
+          status={dossier.status}
+        />
+      ) : null}
+    </div>
+  );
+}
+
 export function DossierWorkspace({
   dossierId,
   justCreated = false,
@@ -593,7 +785,26 @@ export function DossierWorkspace({
     );
   }
 
-  const dossier = detail.data;
+  const dossier =
+    submit.data && detail.data.status === "DRAFT"
+      ? { ...detail.data, ...submit.data.dossier }
+      : detail.data;
+  if (!dossier.canEdit) {
+    return (
+      <SubmittedDossier
+        key={dossier.id}
+        justSubmitted={submit.isSuccess}
+        showPromotionOptions={
+          user?.id === dossier.ownerUserId && user.roles.includes("USER")
+        }
+        dossier={dossier}
+        history={timeline.data ?? []}
+        versions={versions.data ?? []}
+        historyError={timeline.isError}
+        versionsError={versions.isError}
+      />
+    );
+  }
   const submissionComplete =
     submit.isSuccess && dossier.status !== "NEEDS_SUPPLEMENT";
   const supplementRequest = timeline.data
@@ -672,91 +883,6 @@ export function DossierWorkspace({
         </p>
       ) : null}
 
-      {submissionComplete && submit.data ? (
-        <section
-          className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-emerald-950 sm:p-6"
-          role="status"
-        >
-          <h2 className="text-xl font-bold">
-            {submit.data.dossier.status === "PAYMENT_PENDING"
-              ? "Hoàn tất phí nộp hồ sơ để gửi"
-              : "Hồ sơ đã được gửi thành công"}
-          </h2>
-          <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-3">
-            <div>
-              <dt className="text-emerald-800">Mã hồ sơ</dt>
-              <dd className="mt-1 font-bold">
-                {displayCnsDossierCode(submit.data.dossier.code)}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-emerald-800">Thời gian gửi</dt>
-              <dd className="mt-1 font-bold">
-                {submit.data.version.submittedAt
-                  ? new Date(submit.data.version.submittedAt).toLocaleString(
-                      "vi-VN",
-                    )
-                  : "Chờ hoàn tất thanh toán"}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-emerald-800">Trạng thái</dt>
-              <dd className="mt-1 font-bold">
-                {dossierStatusLabel(submit.data.dossier.status)}
-              </dd>
-            </div>
-          </dl>
-          <p className="mt-4 text-sm font-medium">
-            {submit.data.dossier.status === "PAYMENT_PENDING"
-              ? "Bước tiếp theo: thanh toán phí nộp để hồ sơ được tiếp nhận thẩm định."
-              : "Bước tiếp theo: Tinh Hoa Việt kiểm tra hồ sơ của bạn."}
-          </p>
-          <ol
-            aria-label="Các bước sau khi nộp"
-            className="mt-4 grid gap-3 text-sm sm:grid-cols-3"
-          >
-            <li className="rounded-xl bg-white/60 p-3">
-              <strong className="block">1. Đã tiếp nhận</strong>
-              <span className="mt-1 block">
-                Hồ sơ đã có mã để bạn theo dõi.
-              </span>
-            </li>
-            <li className="rounded-xl bg-white/60 p-3">
-              <strong className="block">
-                {submit.data.dossier.status === "PAYMENT_PENDING"
-                  ? "2. Thanh toán phí nộp"
-                  : "2. Kiểm duyệt hồ sơ"}
-              </strong>
-              <span className="mt-1 block">
-                {submit.data.dossier.status === "PAYMENT_PENDING"
-                  ? "Xem khoản phí bên dưới và xác nhận thanh toán bằng ví."
-                  : "Tinh Hoa Việt đối chiếu thông tin và tài liệu."}
-              </span>
-            </li>
-            <li className="rounded-xl bg-white/60 p-3">
-              <strong className="block">3. Thông báo kết quả</strong>
-              <span className="mt-1 block">
-                Xem yêu cầu bổ sung hoặc kết quả khi trạng thái đổi.
-              </span>
-            </li>
-          </ol>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Link
-              className="inline-flex min-h-11 items-center rounded-xl bg-emerald-800 px-4 text-sm font-bold text-white hover:bg-emerald-900"
-              href="/dossiers"
-            >
-              Về hồ sơ của tôi
-            </Link>
-            <Link
-              className="inline-flex min-h-11 items-center rounded-xl border border-emerald-700 px-4 text-sm font-bold text-emerald-900 hover:bg-emerald-100"
-              href="/notifications"
-            >
-              Xem thông báo
-            </Link>
-          </div>
-        </section>
-      ) : null}
-
       {!(justCreated && dossier.status === "DRAFT") && (
         <section className="dossier-state-card">
           <div className="grid gap-5 py-5 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-center">
@@ -814,19 +940,6 @@ export function DossierWorkspace({
         </section>
       )}
 
-      {!dossier.canEdit ? (
-        <section className="dossier-readonly-notice flex items-start gap-3 rounded-2xl p-4 text-sm">
-          <LockKeyhole aria-hidden="true" className="mt-0.5 size-5 shrink-0" />
-          <div>
-            <p className="font-bold">Hồ sơ đã được gửi.</p>
-            <p className="mt-1 leading-6 text-blue-800">
-              Bạn có thể xem hồ sơ và lịch sử. Chỉnh sửa sẽ mở khi có yêu cầu bổ
-              sung.
-            </p>
-          </div>
-        </section>
-      ) : null}
-
       <DossierPaymentAction
         dossierId={dossier.id}
         dossierStatus={dossier.status}
@@ -845,7 +958,7 @@ export function DossierWorkspace({
       ) : null}
 
       <div className="space-y-4">
-        <div className={step === "information" ? "hidden" : undefined}>
+        <div className={step !== "evidence" ? "hidden" : undefined}>
           <DossierClaimsEditor
             key={`${dossier.id}-${dossier.status}`}
             dossierId={dossier.id}
@@ -1231,15 +1344,6 @@ export function DossierWorkspace({
                   </div>
                 </div>
               </div>
-              {dossier.evidences.map((evidence) => (
-                <EvidenceItem
-                  canEdit={false}
-                  documentTypeLabel={evidenceTypeLabel(dossier, evidence)}
-                  evidence={evidence}
-                  key={evidence.id}
-                  onRemove={() => undefined}
-                />
-              ))}
               {dossier.canEdit && !submissionComplete ? (
                 <div>
                   <div className="flex items-start gap-3">
@@ -1394,72 +1498,80 @@ export function DossierWorkspace({
                   tệp.
                 </p>
               ) : null}
-              <div className="grid min-w-0 gap-5 lg:grid-cols-2">
-                <div className="min-w-0">
-                  <h3 className="font-bold">Phiên bản</h3>
-                  <div className="mt-3 space-y-2">
-                    {versions.data?.length ? (
-                      versions.data.map((version) => (
-                        <div
-                          className="min-w-0 overflow-hidden rounded-lg bg-[var(--theme-elevated)] p-3"
-                          key={version.id}
-                        >
-                          <p className="text-sm font-bold">
-                            Phiên bản {version.versionNo}
-                          </p>
-                          <p className="mt-1 text-xs text-neutral-500">
-                            {version.submittedAt ? (
-                              <>
-                                Đã gửi{" "}
-                                {new Date(version.submittedAt).toLocaleString(
-                                  "vi-VN",
-                                )}
-                              </>
-                            ) : (
-                              "Chờ hoàn tất thanh toán"
-                            )}
-                          </p>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-sm text-neutral-500">
-                        Chưa có phiên bản đã nộp.
-                      </p>
-                    )}
-                  </div>
-                </div>
-                <div className="min-w-0">
-                  <h3 className="font-bold">Dòng thời gian</h3>
-                  <div className="mt-3 space-y-2">
-                    {timeline.data?.length ? (
-                      timeline.data.map((item) => (
-                        <div
-                          className="flex gap-3 rounded-lg bg-[var(--theme-elevated)] p-3"
-                          key={item.id}
-                        >
-                          <span className="mt-1 size-2 rounded-full bg-primary-600" />
-                          <div>
-                            <p className="text-sm font-bold">
-                              {dossierStatusLabel(item.toStatus)}
-                            </p>
-                            <p className="mt-1 text-xs text-neutral-500">
-                              {new Date(item.createdAt).toLocaleString("vi-VN")}
-                            </p>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-sm text-neutral-500">
-                        Chưa có thay đổi trạng thái.
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
             </section>
           ) : null}
         </div>
       </div>
+
+      {dossier.currentVersionNo > 0 ? (
+        <details className="border-t border-[var(--theme-border)] py-4">
+          <summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold">
+            Lịch sử các lần nộp và bổ sung
+          </summary>
+          <div className="grid min-w-0 gap-5 lg:grid-cols-2">
+            <div className="min-w-0">
+              <h3 className="font-bold">Phiên bản</h3>
+              <div className="mt-3 space-y-2">
+                {versions.data?.length ? (
+                  versions.data.map((version) => (
+                    <div
+                      className="min-w-0 overflow-hidden rounded-lg bg-[var(--theme-elevated)] p-3"
+                      key={version.id}
+                    >
+                      <p className="text-sm font-bold">
+                        Phiên bản {version.versionNo}
+                      </p>
+                      <p className="mt-1 text-xs text-neutral-500">
+                        {version.submittedAt ? (
+                          <>
+                            Đã gửi{" "}
+                            {new Date(version.submittedAt).toLocaleString(
+                              "vi-VN",
+                            )}
+                          </>
+                        ) : (
+                          "Chờ hoàn tất thanh toán"
+                        )}
+                      </p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-neutral-500">
+                    Chưa có phiên bản đã nộp.
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="min-w-0">
+              <h3 className="font-bold">Dòng thời gian</h3>
+              <div className="mt-3 space-y-2">
+                {timeline.data?.length ? (
+                  timeline.data.map((item) => (
+                    <div
+                      className="flex gap-3 rounded-lg bg-[var(--theme-elevated)] p-3"
+                      key={item.id}
+                    >
+                      <span className="mt-1 size-2 rounded-full bg-primary-600" />
+                      <div>
+                        <p className="text-sm font-bold">
+                          {dossierStatusLabel(item.toStatus)}
+                        </p>
+                        <p className="mt-1 text-xs text-neutral-500">
+                          {new Date(item.createdAt).toLocaleString("vi-VN")}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-neutral-500">
+                    Chưa có thay đổi trạng thái.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </details>
+      ) : null}
 
       {user?.id === dossier.ownerUserId && user.roles.includes("USER") ? (
         <DossierPromotionOptions
@@ -1470,9 +1582,13 @@ export function DossierWorkspace({
       {dossier.status !== "DRAFT" && (
         <div id="dossier-publication-progress" tabIndex={-1}>
           <DossierWorkflowTimeline
+            {...dossier}
             history={timeline.data ?? []}
             status={dossier.status}
             submissionFeeRequired={dossier.submissionFeeRequired}
+            submissionFeePaidAt={dossier.submissionFeePaidAt}
+            submissionFeeWaivedAt={dossier.submissionFeeWaivedAt}
+            isTest={dossier.isTest}
           />
         </div>
       )}

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { FileCheck2 } from "lucide-react";
 
 import { formatEvidenceMimeType } from "@/components/reviews/review-evidence-format";
@@ -50,6 +51,10 @@ export function ReviewEvidenceAssessments({
   onChange: (value: Record<string, EvidenceAssessment>) => void;
   readOnly?: boolean;
 }) {
+  const [selected, setSelected] = useState(evidences[0]?.id ?? "");
+  const activeId = evidences.some((item) => item.id === selected)
+    ? selected
+    : evidences[0]?.id;
   const reviewedCount = evidences.filter(
     (evidence) =>
       assessments[evidence.mediaAssetId]?.status &&
@@ -75,7 +80,7 @@ export function ReviewEvidenceAssessments({
               aria-hidden="true"
               className="size-5 text-[var(--theme-accent)]"
             />
-            Kết quả kiểm tra từng tệp
+            Kiểm tra tài liệu
           </h3>
           <p className="mt-1 text-sm text-[var(--theme-muted)]">
             Đánh giá sự liên quan và kiểm chứng nội dung riêng. Tệp tải lên
@@ -87,6 +92,26 @@ export function ReviewEvidenceAssessments({
           {reviewedCount}/{evidences.length} đã kiểm tra
         </span>
       </div>
+      {evidences.length > 1 ? (
+        <label className="mt-4 block text-sm font-semibold">
+          Tài liệu cần kiểm tra
+          <select
+            className="mt-2 min-h-11 w-full rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3"
+            value={activeId}
+            onChange={(event) => setSelected(event.target.value)}
+          >
+            {evidences.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.title} ·{" "}
+                {assessments[item.mediaAssetId]?.status &&
+                assessments[item.mediaAssetId]?.status !== "UNREVIEWED"
+                  ? "Đã kiểm tra"
+                  : "Chưa kiểm tra"}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : null}
       <div className="mt-4 grid gap-3">
         {evidences.map((evidence) => {
           const assessment = assessments[evidence.mediaAssetId] ?? {
@@ -103,7 +128,8 @@ export function ReviewEvidenceAssessments({
             };
           return (
             <article
-              className="grid gap-3 rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] p-3 sm:grid-cols-[minmax(0,1fr)_13rem] sm:items-center"
+              hidden={evidence.id !== activeId}
+              className="[&[hidden]]:hidden space-y-3 border-t border-[var(--theme-border)] py-4"
               key={evidence.id}
             >
               <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_13rem] sm:items-center">

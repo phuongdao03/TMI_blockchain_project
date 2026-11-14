@@ -6,33 +6,26 @@ test("dark mode keeps submitted dossier notices and workflow readable", async ({
   page,
   request,
 }) => {
-  await request.post("http://127.0.0.1:4010/api/e2e/reset-payment");
+  await request.post(
+    `http://127.0.0.1:${process.env.E2E_MOCK_PORT ?? "4010"}/api/e2e/reset-payment`,
+  );
   await page.goto("/dossiers/9155dbf5-bb3e-449d-8bf0-9572cc642cac");
   await selectWorkspaceTheme(page, "Giao diện tối");
 
-  const summary = page.locator(".dossier-state-card");
-  const readonlyNotice = page.locator(".dossier-readonly-notice");
-  const workflow = page.locator(".dossier-workflow");
-
+  const summary = page.locator(".dossier-workspace > header");
+  const workflow = page.getByRole("region", {
+    name: "Tiến độ hồ sơ",
+    exact: true,
+  });
   await expect(summary).toBeVisible();
-  await expect(readonlyNotice).toBeVisible();
   await expect(workflow).toBeVisible();
-  await expect(summary).not.toHaveCSS("background-color", "rgb(243, 246, 240)");
-  await expect(readonlyNotice).not.toHaveCSS(
-    "background-color",
-    "rgb(239, 246, 255)",
-  );
-  await expect(workflow).not.toHaveCSS(
-    "background-color",
-    "rgb(255, 255, 255)",
-  );
-
-  const noticeColors = await readonlyNotice.evaluate((element) => ({
-    background: getComputedStyle(element).backgroundColor,
-    text: getComputedStyle(element).color,
-  }));
-  expect(noticeColors.background).not.toBe("rgb(239, 246, 255)");
-  expect(noticeColors.text).not.toBe("rgb(30, 58, 138)");
+  await expect(
+    page.getByRole("navigation", { name: "Các bước hoàn thiện hồ sơ" }),
+  ).toHaveCount(0);
+  await expect(summary).toHaveCSS("color", "rgb(255, 249, 243)");
+  await expect(workflow).toHaveCSS("color", "rgb(255, 249, 243)");
+  await workflow.getByText("Xem toàn bộ tiến độ", { exact: true }).click();
+  await expect(workflow.getByText("Từ chuẩn bị đến công bố")).toBeVisible();
 });
 
 test.beforeEach(async ({ context, request }) => {

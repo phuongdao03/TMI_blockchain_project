@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ReviewWorkspace } from "@/components/reviews/review-workspace";
@@ -51,14 +52,13 @@ describe("ReviewWorkspace", () => {
     );
 
     expect(await screen.findByText("Tác phẩm văn hóa")).toBeDefined();
-    expect(
-      screen.getByRole("link", { name: "Tài liệu" }).getAttribute("href"),
-    ).toBe("#review-evidence");
-    expect(
-      screen
-        .getByRole("link", { name: "Phiếu thẩm định" })
-        .getAttribute("href"),
-    ).toBe("#review-scorecard");
+    await userEvent.click(
+      screen.getByRole("button", { name: "Tài liệu hồ sơ" }),
+    );
+    expect(screen.getByText("Danh sách tài liệu")).toBeDefined();
+    await userEvent.click(
+      screen.getByRole("button", { name: "Phiếu thẩm định" }),
+    );
     expect(document.getElementById("review-evidence")).toBeDefined();
     expect(document.getElementById("review-scorecard")).toBeDefined();
     expect(

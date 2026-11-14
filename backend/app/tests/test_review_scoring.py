@@ -388,6 +388,7 @@ def test_reviewer_conflict_gate_draft_and_immutable_submit() -> None:
         redacted = await service.get_assignment(reviewer, assignment.id)
         assert page.total == 1
         assert page.items[0].dossier_title == "Hồ sơ chấm điểm 5T"
+        assert redacted.workflow_progress is None
         assert redacted.snapshot_json is None
         assert redacted.review is None
 
@@ -701,5 +702,52 @@ def test_reviewer_access_and_conflict_rules_are_enforced() -> None:
 
         await service.close()
         await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_stale_draft_token_cannot_overwrite_another_session() -> None:
+    async def exercise() -> None:
+        service, _, engine, users, assignment, _ = await _setup()
+        reviewer = _principal(users["reviewer"])
+        try:
+            await service.declare_conflict(
+                reviewer, assignment.id, has_conflict=False, reason=None
+            )
+            first = await service.save_draft(
+                reviewer,
+                assignment.id,
+                ReviewDraft(private_note="First session"),
+                expected_draft_token="new",
+            )
+            assert len(first.draft_token) == 64
+            with pytest.raises(ReviewConflictError, match="another session"):
+                await service.save_draft(
+                    reviewer,
+                    assignment.id,
+                    ReviewDraft(private_note="Stale first save"),
+                    expected_draft_token="new",
+                )
+            second = await service.save_draft(
+                reviewer,
+                assignment.id,
+                ReviewDraft(private_note="Updated session"),
+                expected_draft_token=first.draft_token,
+            )
+            assert second.draft_token != first.draft_token
+            with pytest.raises(ReviewConflictError, match="another session"):
+                await service.save_draft(
+                    reviewer,
+                    assignment.id,
+                    ReviewDraft(private_note="Stale later save"),
+                    expected_draft_token=first.draft_token,
+                )
+            detail = await service.get_assignment(reviewer, assignment.id)
+            assert detail.review is not None
+            assert detail.review.private_note == "Updated session"
+            assert detail.review.draft_token == second.draft_token
+        finally:
+            await service.close()
+            await engine.dispose()
 
     asyncio.run(exercise())

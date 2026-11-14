@@ -63,6 +63,8 @@ class DossierView:
     created_at: datetime
     updated_at: datetime
     can_edit: bool
+    submission_fee_policy_mode: str = "LEGACY"
+    submission_fee_test_exempted: bool = False
     submission_fee_required: bool = False
     submission_fee_paid_at: datetime | None = None
     submission_fee_waived_at: datetime | None = None

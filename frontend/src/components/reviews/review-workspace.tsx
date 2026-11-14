@@ -11,12 +11,14 @@ import {
   LoaderCircle,
 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { DossierWorkflowTimeline } from "@/components/dossiers/dossier-workflow-timeline";
 
 import { EvidenceViewer } from "@/components/reviews/evidence-viewer";
 import { FiveTScorecard } from "@/components/reviews/five-t-scorecard";
 import { ReviewAssistancePanel } from "@/components/reviews/review-assistance-panel";
 import { SupplementRequestsPanel } from "@/components/supplements/supplement-requests-panel";
+import { TaskNavigation } from "@/components/ui/task-navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { WorkflowNextStep } from "@/components/ui/workflow-next-step";
@@ -63,6 +65,8 @@ export function reviewDeadlineState(dueAt: string | null, now = new Date()) {
 }
 
 export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
+  const draftTokens = useRef(new Map<string, string>());
+  const [workspaceView, setWorkspaceView] = useState("assessment");
   const queryClient = useQueryClient();
   const [showConflictReason, setShowConflictReason] = useState(false);
   const [conflictReason, setConflictReason] = useState("");
@@ -70,9 +74,23 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
     queryKey: reviewKeys.detail(assignmentId),
     queryFn: () => reviewApi.get(assignmentId),
   });
+  const draftKey = `${assignmentId}:${query.data?.assignment.dossierVersionId}`;
+  useEffect(() => {
+    if (query.data?.snapshotJson && !draftTokens.current.has(draftKey)) {
+      draftTokens.current.set(draftKey, query.data.review?.draftToken ?? "new");
+    }
+  }, [draftKey, query.data]);
   const save = useMutation({
     mutationFn: (draft: ReviewDraft) =>
-      reviewApi.saveDraft(assignmentId, draft),
+      reviewApi.saveDraft(
+        assignmentId,
+        draft,
+        draftTokens.current.get(draftKey),
+      ),
+    onSuccess: (review) => {
+      if (review?.draftToken)
+        draftTokens.current.set(draftKey, review.draftToken);
+    },
   });
   const declareConflict = useMutation({
     mutationFn: (input: { hasConflict: boolean; reason?: string }) =>
@@ -182,36 +200,16 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
                 {evidenceCount} tài liệu
               </span>
             </div>
-            <nav
-              aria-label="Đi tới nội dung thẩm định"
-              className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm"
-            >
-              <a
-                className="inline-flex min-h-10 items-center gap-2 font-semibold text-[var(--theme-text)] hover:text-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
-                href="#review-evidence"
-              >
-                <Files
-                  aria-hidden="true"
-                  className="size-4 text-[var(--theme-accent)]"
-                />
-                Tài liệu
-              </a>
-              <a
-                className="inline-flex min-h-10 items-center gap-2 font-bold text-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
-                href="#review-scorecard"
-              >
-                <ClipboardCheck aria-hidden="true" className="size-4" />
-                Phiếu thẩm định
-              </a>
-              {detail.assignment.status === "IN_PROGRESS" ? (
-                <a
-                  className="inline-flex min-h-10 items-center font-semibold text-[var(--theme-muted)] hover:text-[var(--theme-accent)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--theme-accent)]"
-                  href="#review-assistance"
-                >
-                  Yêu cầu hỗ trợ
-                </a>
-              ) : null}
-            </nav>
+            <TaskNavigation
+              label="Không gian thẩm định"
+              value={workspaceView}
+              onChange={setWorkspaceView}
+              items={[
+                { id: "documents", label: "Tài liệu hồ sơ" },
+                { id: "assessment", label: "Phiếu thẩm định" },
+                { id: "requests", label: "Bổ sung và phối hợp" },
+              ]}
+            />
           </div>
         ) : null}
       </section>
@@ -299,6 +297,12 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
         />
       ) : null}
 
+      {detail.workflowProgress ? (
+        <DossierWorkflowTimeline
+          audience="staff"
+          {...detail.workflowProgress}
+        />
+      ) : null}
       {save.error || submit.error ? (
         <p
           className="review-workspace__error rounded-xl border p-4 text-sm font-semibold"
@@ -308,8 +312,10 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
             Không thể lưu hoặc gửi phiếu thẩm định.
           </span>
           <span className="mt-1 block font-medium">
-            {(submit.error ?? save.error)?.message ||
-              "Nội dung vẫn còn trên màn hình; vui lòng thử lại."}
+            {save.error?.message.includes("another session")
+              ? "Bản nháp đã được sửa ở phiên khác. Nội dung bạn nhập vẫn được giữ; mở hồ sơ trong tab mới để đối chiếu trước khi tải lại."
+              : (submit.error ?? save.error)?.message ||
+                "Nội dung vẫn còn trên màn hình; vui lòng thử lại."}
           </span>
         </p>
       ) : null}
@@ -328,6 +334,7 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
       detail.snapshotJson ? (
         <div className="space-y-8" id="review-form">
           <aside
+            hidden={workspaceView !== "documents"}
             aria-label="Hồ sơ và tài liệu kiểm chứng"
             className="min-w-0 scroll-mt-24 space-y-4"
             id="review-evidence"
@@ -361,17 +368,13 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
               </code>
             </details>
           </aside>
-          <div className="min-w-0 scroll-mt-24" id="review-scorecard">
-            <SupplementRequestsPanel
-              dossierId={detail.assignment.dossierId}
-              mode="reviewer"
-              versionId={detail.assignment.dossierVersionId}
-              criteria={
-                detail.snapshotJson.dossier.dossierType?.reviewRubric
-                  ?.criteria ?? []
-              }
-            />
+          <div
+            hidden={workspaceView !== "assessment"}
+            className="min-w-0 scroll-mt-24"
+            id="review-scorecard"
+          >
             <FiveTScorecard
+              key={`${assignmentId}-${detail.assignment.dossierVersionId}`}
               claims={detail.snapshotJson.dossier.claims ?? []}
               evidences={detail.snapshotJson.evidences ?? []}
               initialReview={detail.review}
@@ -393,11 +396,22 @@ export function ReviewWorkspace({ assignmentId }: { assignmentId: string }) {
           </div>
         </div>
       ) : null}
-      <ReviewAssistancePanel
-        assignmentId={assignmentId}
-        canRequest={detail.assignment.status === "IN_PROGRESS"}
-        requests={detail.assistanceRequests ?? []}
-      />
+      <div hidden={workspaceView !== "requests"} className="space-y-4">
+        <SupplementRequestsPanel
+          dossierId={detail.assignment.dossierId}
+          mode="reviewer"
+          versionId={detail.assignment.dossierVersionId}
+          criteria={
+            detail.snapshotJson?.dossier.dossierType?.reviewRubric?.criteria ??
+            []
+          }
+        />
+        <ReviewAssistancePanel
+          assignmentId={assignmentId}
+          canRequest={detail.assignment.status === "IN_PROGRESS"}
+          requests={detail.assistanceRequests ?? []}
+        />
+      </div>
     </div>
   );
 }

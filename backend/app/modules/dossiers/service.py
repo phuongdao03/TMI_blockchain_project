@@ -1828,6 +1828,11 @@ class DossierService:
             created_at=dossier.created_at,
             updated_at=dossier.updated_at,
             can_edit=can_edit,
+            submission_fee_policy_mode=dossier.submission_fee_policy_mode,
+            submission_fee_test_exempted=(
+                (dossier.submission_fee_snapshot or {}).get("waiverReason")
+                == "TEST_SUBMISSION_FEE_EXEMPTION"
+            ),
             submission_fee_required=dossier.submission_fee_required,
             submission_fee_paid_at=dossier.submission_fee_paid_at,
             submission_fee_waived_at=dossier.submission_fee_waived_at,

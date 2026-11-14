@@ -101,8 +101,11 @@ test("reviewer sees evidence and verdict before optional assistance", async ({
     waitUntil: "domcontentloaded",
   });
   await expect(
-    page.getByRole("heading", { name: "Kết luận theo tiêu chí" }),
+    page.getByRole("heading", { name: "Đánh giá từng tiêu chí" }),
   ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Tài liệu hồ sơ", exact: true })
+    .click();
   await expect(
     page.getByRole("heading", {
       name: "Bằng chứng về quyền sử dụng nhãn hiệu",
@@ -113,6 +116,9 @@ test("reviewer sees evidence and verdict before optional assistance", async ({
       "Loại tài liệu: Tài liệu về quyền sử dụng hoặc đại diện nhãn hiệu",
     ),
   ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Bổ sung và phối hợp", exact: true })
+    .click();
   const assistance = page.locator(".review-assistance");
   await expect(assistance).toBeVisible();
   expect(

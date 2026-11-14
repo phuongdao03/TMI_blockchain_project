@@ -142,12 +142,32 @@ class DossierData(DossierSchema):
     created_at: datetime
     updated_at: datetime
     can_edit: bool
+    submission_fee_policy_mode: str = "LEGACY"
+    submission_fee_test_exempted: bool = False
     submission_fee_required: bool = False
     submission_fee_paid_at: datetime | None = None
     submission_fee_waived_at: datetime | None = None
     is_test: bool = False
     claims: tuple[DossierClaimData, ...] = ()
     claims_revision: int = 0
+
+
+class DossierWorkflowHistoryData(DossierSchema):
+    from_status: DossierStatus
+    to_status: DossierStatus
+    created_at: datetime
+    note: None = None
+
+
+class DossierWorkflowProgressData(DossierSchema):
+    status: DossierStatus
+    submission_fee_policy_mode: str
+    submission_fee_required: bool
+    submission_fee_paid_at: datetime | None
+    submission_fee_waived_at: datetime | None
+    submission_fee_test_exempted: bool
+    is_test: bool
+    history: tuple[DossierWorkflowHistoryData, ...]
 
 
 class SubmissionFeeQuoteData(DossierSchema):

@@ -1,4 +1,7 @@
+import hashlib
+import json
 from collections.abc import Callable, Mapping
+from dataclasses import asdict, replace
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
@@ -150,6 +153,7 @@ class ReviewService:
                 assignment_count=summary.assignment_count,
                 canonical_hash=version.canonical_hash,
                 snapshot_json=version.snapshot_json,
+                workflow_progress=await self._workflow_progress(dossier),
                 assignments=tuple(
                     AdminReviewAssignmentView(
                         assignment=self._assignment_view(assignment),
@@ -525,6 +529,11 @@ class ReviewService:
                     fallback=dossier.title,
                 ),
                 version_no=version.version_no,
+                workflow_progress=(
+                    await self._workflow_progress(dossier)
+                    if can_view_sensitive
+                    else None
+                ),
                 canonical_hash=(version.canonical_hash if can_view_sensitive else None),
                 snapshot_json=(version.snapshot_json if can_view_sensitive else None),
                 review=self._review_view(review) if review is not None else None,
@@ -533,6 +542,35 @@ class ReviewService:
                     for request in assistance_requests
                 ),
             )
+
+    async def _workflow_progress(self, dossier: Dossier) -> dict[str, object]:
+        history = await self._dossiers.list_status_history(dossier.id)
+        return {
+            "status": dossier.status.value,
+            "submissionFeePolicyMode": dossier.submission_fee_policy_mode,
+            "submissionFeeRequired": dossier.submission_fee_required,
+            "submissionFeePaidAt": dossier.submission_fee_paid_at.isoformat()
+            if dossier.submission_fee_paid_at
+            else None,
+            "submissionFeeWaivedAt": dossier.submission_fee_waived_at.isoformat()
+            if dossier.submission_fee_waived_at
+            else None,
+            "submissionFeeTestExempted": (
+                (dossier.submission_fee_snapshot or {}).get("waiverReason")
+                == "TEST_SUBMISSION_FEE_EXEMPTION"
+            ),
+            "isTest": dossier.is_test,
+            # Do not expose actors or internal history notes through reviewer access.
+            "history": [
+                {
+                    "fromStatus": item.from_status.value,
+                    "toStatus": item.to_status.value,
+                    "createdAt": item.created_at.isoformat(),
+                    "note": None,
+                }
+                for item in history
+            ],
+        }
 
     async def declare_conflict(
         self,
@@ -575,6 +613,8 @@ class ReviewService:
         principal: AuthPrincipal,
         assignment_id: UUID,
         draft: ReviewDraft,
+        *,
+        expected_draft_token: str | None = None,
     ) -> ReviewView:
         self._require_reviewer(principal)
         validated = self._validated_draft(draft)
@@ -597,6 +637,16 @@ class ReviewService:
                 assignment.id,
                 for_update=True,
             )
+            current_token = (
+                self._review_view(review).draft_token if review is not None else "new"
+            )
+            if (
+                expected_draft_token is not None
+                and expected_draft_token != current_token
+            ):
+                raise ReviewConflictError(
+                    "Review draft changed in another session. Reload before saving."
+                )
             if review is None:
                 review = Review(
                     id=self._uuid_factory(),
@@ -1756,7 +1806,7 @@ class ReviewService:
 
     @staticmethod
     def _review_view(review: Review) -> ReviewView:
-        return ReviewView(
+        view = ReviewView(
             id=review.id,
             assignment_id=review.assignment_id,
             truth_score=review.truth_score,
@@ -1780,6 +1830,11 @@ class ReviewService:
             evidence_assessments=review.evidence_assessments,
             submitted_at=review.submitted_at,
         )
+
+        token = hashlib.sha256(
+            json.dumps(asdict(view), sort_keys=True, default=str).encode()
+        ).hexdigest()
+        return replace(view, draft_token=token)
 
     @staticmethod
     def _reviewer_ids(values: tuple[UUID, ...]) -> tuple[UUID, ...]:

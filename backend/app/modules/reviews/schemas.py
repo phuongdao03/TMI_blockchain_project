@@ -5,6 +5,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.modules.dossiers.models import DossierStatus
+from app.modules.dossiers.schemas import DossierWorkflowProgressData
 from app.modules.reviews.models import (
     ReviewAssignmentStatus,
     ReviewAssistanceRequestStatus,
@@ -236,6 +237,7 @@ class ReviewDraftRequest(ReviewSchema):
 
 
 class ReviewData(ReviewSchema):
+    draft_token: str = ""
     id: UUID
     assignment_id: UUID
     truth_score: int | None
@@ -276,6 +278,7 @@ class AdminReviewDossierDetailData(AdminReviewDossierSummaryData):
     snapshot_json: dict[str, object]
     assignments: tuple[AdminReviewAssignmentData, ...]
     assistance_requests: tuple[AdminReviewAssistanceRequestData, ...] = ()
+    workflow_progress: DossierWorkflowProgressData | None = None
 
 
 class ReviewAssignmentSummaryData(ReviewSchema):
@@ -290,6 +293,7 @@ class ReviewAssignmentDetailData(ReviewAssignmentSummaryData):
     snapshot_json: dict[str, Any] | None
     review: ReviewData | None
     assistance_requests: tuple[ReviewAssistanceRequestData, ...] = ()
+    workflow_progress: DossierWorkflowProgressData | None = None
 
 
 class AssignSimilarityCaseRequest(ReviewSchema):

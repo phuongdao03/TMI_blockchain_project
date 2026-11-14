@@ -129,6 +129,7 @@ class ReviewView:
     evidence_assessments: Mapping[str, Mapping[str, object]]
     submitted_at: datetime | None
     criterion_verdicts: Mapping[str, Mapping[str, object]] = field(default_factory=dict)
+    draft_token: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -144,6 +145,7 @@ class AdminReviewDossierDetailView(AdminReviewDossierSummaryView):
     snapshot_json: Mapping[str, object]
     assignments: tuple[AdminReviewAssignmentView, ...]
     assistance_requests: tuple[AdminReviewAssistanceRequestView, ...] = ()
+    workflow_progress: Mapping[str, object] | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -170,6 +172,7 @@ class ReviewAssignmentDetailView:
     snapshot_json: Mapping[str, object] | None
     review: ReviewView | None
     assistance_requests: tuple[ReviewAssistanceRequestView, ...] = ()
+    workflow_progress: Mapping[str, object] | None = None
 
 
 @dataclass(frozen=True, slots=True)

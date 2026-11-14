@@ -43,6 +43,9 @@ it("focuses one criterion and preserves edits when moving between criteria", asy
       requireEvidenceAssessments={false}
     />,
   );
+  await user.click(
+    screen.getByRole("button", { name: "Đánh giá từng tiêu chí" }),
+  );
   expect(screen.queryByRole("radio", { name: "Giá trị: Đáp ứng" })).toBeNull();
   await user.type(
     screen.getByLabelText("Nhận định Nguồn gốc"),
@@ -92,14 +95,18 @@ it("can request sources for insufficient basis without manufacturing an evidence
     />,
   );
   await user.click(
+    screen.getByRole("button", { name: "Đánh giá từng tiêu chí" }),
+  );
+  await user.click(
     screen.getByRole("radio", { name: "Nguồn gốc: Chưa đủ căn cứ" }),
   );
   await user.type(
     screen.getByLabelText("Nhận định Nguồn gốc"),
     "Chưa có nguồn độc lập về niên đại được khai báo.",
   );
+  await user.click(screen.getByRole("button", { name: "Báo cáo" }));
   await user.type(
-    screen.getByLabelText("Phản hồi gửi người nộp"),
+    screen.getByLabelText("Nội dung gửi người nộp"),
     "Vui lòng bổ sung tư liệu có niên đại hoặc giải trình nguồn thông tin.",
   );
   await user.click(
@@ -119,7 +126,7 @@ it("can request sources for insufficient basis without manufacturing an evidence
   expect(screen.getByRole("button", { name: "Xác nhận gửi" })).toBeDefined();
 });
 
-it("shows frozen applicant claims without adopting them as the reviewer's conclusion", () => {
+it("shows frozen applicant claims without adopting them as the reviewer's conclusion", async () => {
   render(
     <VerdictReviewForm
       rubric={rubric}
@@ -140,6 +147,9 @@ it("shows frozen applicant claims without adopting them as the reviewer's conclu
       readOnly={false}
       requireEvidenceAssessments={false}
     />,
+  );
+  await userEvent.click(
+    screen.getByRole("button", { name: "Đánh giá từng tiêu chí" }),
   );
   expect(
     screen.getByText("Tác phẩm được sáng tác độc lập năm 2024."),

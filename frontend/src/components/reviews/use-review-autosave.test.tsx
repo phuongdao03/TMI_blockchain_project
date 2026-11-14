@@ -1,4 +1,4 @@
-import { renderHook } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { useReviewAutosave } from "@/components/reviews/use-review-autosave";
@@ -58,4 +58,34 @@ describe("useReviewAutosave", () => {
     finishSave?.();
     await vi.waitFor(() => expect(save).toHaveBeenCalledTimes(1));
   });
+});
+
+it("serializes manual save with autosave and only reports saved after acknowledgement", async () => {
+  let finish: (() => void) | undefined;
+  const save = vi.fn(
+    () =>
+      new Promise<void>((resolve) => {
+        finish = resolve;
+      }),
+  );
+  const { result, rerender } = renderHook(
+    ({ draft }) =>
+      useReviewAutosave({ draft, onSave: save, readOnly: false, delay: 10 }),
+    { initialProps: { draft: initialDraft } },
+  );
+  const changed = { ...initialDraft, privateNote: "Changed" };
+  rerender({ draft: changed });
+  expect(result.current.status).toBe("pending");
+  await vi.waitFor(() => expect(save).toHaveBeenCalledTimes(1));
+  let manual: Promise<void>;
+  act(() => {
+    manual = result.current.save(changed);
+  });
+  expect(save).toHaveBeenCalledTimes(1);
+  await act(async () => {
+    finish?.();
+    await manual;
+  });
+  expect(result.current.status).toBe("saved");
+  expect(save).toHaveBeenCalledTimes(1);
 });

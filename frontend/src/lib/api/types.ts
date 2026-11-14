@@ -816,6 +816,8 @@ export type EvidenceAccessScope =
 export interface Dossier {
   claims?: DossierClaim[];
   claimsRevision?: number;
+  submissionFeePolicyMode?: string;
+  submissionFeeTestExempted?: boolean;
   submissionFeeRequired?: boolean;
   submissionFeePaidAt?: string | null;
   submissionFeeWaivedAt?: string | null;
@@ -1227,6 +1229,7 @@ export interface EvidenceVerification {
 }
 
 export interface ReviewData extends ReviewDraft {
+  draftToken?: string;
   id: string;
   assignmentId: string;
   totalScore: number | null;
@@ -1235,7 +1238,22 @@ export interface ReviewData extends ReviewDraft {
   submittedAt: string | null;
 }
 
+export interface DossierWorkflowProgress {
+  status: DossierStatus;
+  submissionFeePolicyMode?: string;
+  submissionFeeRequired?: boolean;
+  submissionFeePaidAt?: string | null;
+  submissionFeeWaivedAt?: string | null;
+  submissionFeeTestExempted?: boolean;
+  isTest?: boolean;
+  history: Pick<
+    DossierTimelineItem,
+    "fromStatus" | "toStatus" | "createdAt" | "note"
+  >[];
+}
+
 export interface ReviewAssignmentDetail extends ReviewAssignmentSummary {
+  workflowProgress?: DossierWorkflowProgress | null;
   canonicalHash: string | null;
   snapshotJson: ReviewSnapshot | null;
   review: ReviewData | null;
@@ -1258,6 +1276,7 @@ export interface AdminReviewDossierSummary {
 }
 
 export interface AdminReviewDossierDetail extends AdminReviewDossierSummary {
+  workflowProgress?: DossierWorkflowProgress | null;
   canonicalHash: string;
   snapshotJson: ReviewSnapshot;
   assignments: AdminReviewAssignment[];

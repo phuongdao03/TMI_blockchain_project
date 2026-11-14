@@ -191,9 +191,14 @@ export function EvidenceViewer({
                         )}
                         Xem bằng chứng
                       </Button>
-                      <PrivateDocumentVerification
-                        mediaId={evidence.mediaAssetId}
-                      />
+                      <details className="sm:col-span-2">
+                        <summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold text-[var(--theme-muted)]">
+                          Kiểm tra tính toàn vẹn
+                        </summary>
+                        <PrivateDocumentVerification
+                          mediaId={evidence.mediaAssetId}
+                        />
+                      </details>
                     </article>
                   );
                 })}

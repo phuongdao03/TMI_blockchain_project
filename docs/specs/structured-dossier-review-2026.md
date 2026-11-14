@@ -121,3 +121,23 @@ saves the same file. Downgrade removes migration-created template rows only when
 none is referenced by a dossier; otherwise it fails closed and requires
 compatible roll-forward recovery. Never remove evidence/history as a rollback
 operation. PostgreSQL/staging recovery remains unverified.
+
+
+## UI/UX journey redesign ? 2026-11-14
+
+User specification: redesign applicant, reviewer and admin information architecture; preserve rubric, authorization, fee history and certificate/publication gates. Existing submission service already reserves fees before official intake; no payment behavior or schema change is planned.
+
+Implementation sequence and acceptance:
+1. Centralize evidence-based progress: separate fee settlement/waiver from dossier status, preserve legacy order, never infer completion from stage index. Verify timeline unit tests for pending, waived, rejected, supplement, publication and missing history.
+2. Separate locked dossier tracking from editable preparation: overview, documents, supplements, history; no wizard after submission. Keep existing upload queue, signing and integrity checks. Verify workspace component tests.
+3. Focus reviewer work: task navigation for document checks, reception gates, criteria and report; keep draft state mounted across navigation and retain backend validation. Verify switching and autosave tests.
+4. Admin: reveal assignment composer on demand, reports on demand, decision fields only when reports and dossier state permit. Verify lifecycle component tests.
+5. Verify npm test, npm run lint, npm run typecheck, npm --prefix frontend run build, npm run test:e2e; inspect browser at 320/375/390/768/1024/1440 and both themes. Record unavailable checks honestly.
+
+Source boundaries: frontend/src/components/{dossiers,reviews,admin}; focused tests colocated; backend/app/tests holds business regression tests. Use existing semantic theme variables, native buttons and labeled inputs. No new dependencies, production changes, real money, migrations, role or rubric changes. Keep local artifacts in ignored .tmp/.
+
+Example convention: `<button type="button" aria-pressed={active} onClick={select}>T?i li?u</button>`. Task navigation must preserve unsaved form state; server remains authority for mutation eligibility.
+
+### Concurrent review draft protection
+
+Add an optional opaque `draftToken` to review responses and optional `X-Review-Draft-Token` to saves. Compare the submitted token while holding the existing assignment/review locks, before applying any draft changes. A missing review uses `new`; mismatches return existing REVIEW_CONFLICT/409. Keep the editor state and offer reload for comparison, never automatically retry with another session's token. Existing clients without the header retain compatibility. Tokens hash the complete persisted view, not a database migration. Verify stale first-save, stale subsequent save, current-token retry, and unchanged persisted content.

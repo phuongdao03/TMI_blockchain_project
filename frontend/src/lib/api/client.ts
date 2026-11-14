@@ -2378,9 +2378,10 @@ export const reviewApi = {
       { method: "POST", body: JSON.stringify(input) },
     );
   },
-  saveDraft(assignmentId: string, draft: ReviewDraft) {
+  saveDraft(assignmentId: string, draft: ReviewDraft, draftToken?: string) {
     return request<ReviewData>(`/reviewer/assignments/${assignmentId}/draft`, {
       method: "PUT",
+      headers: draftToken ? { "X-Review-Draft-Token": draftToken } : undefined,
       body: JSON.stringify(draft),
     });
   },

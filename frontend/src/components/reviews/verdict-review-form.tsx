@@ -19,6 +19,7 @@ import {
 } from "@/components/reviews/review-evidence-policy";
 import { ReviewEvidenceSelect } from "@/components/reviews/review-evidence-select";
 import { useReviewAutosave } from "@/components/reviews/use-review-autosave";
+import { TaskNavigation } from "@/components/ui/task-navigation";
 import { Button } from "@/components/ui/button";
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import type {
@@ -148,6 +149,8 @@ export function VerdictReviewForm({
   rubric: ReviewRubric;
   saveError?: Error | null;
 }) {
+  const [task, setTask] = useState("documents");
+  const [selectedGate, setSelectedGate] = useState(rubric.gates[0]?.key ?? "");
   const [selectedCriterion, setSelectedCriterion] = useState(
     rubric.criteria[0]?.key ?? "",
   );
@@ -282,7 +285,7 @@ export function VerdictReviewForm({
       applicantFeedback.trim().length < 20
     ) {
       issues.push(
-        `Phản hồi gửi người nộp cần ít nhất 20 ký tự (hiện có ${applicantFeedback.trim().length}).`,
+        `Nội dung gửi người nộp cần ít nhất 20 ký tự (hiện có ${applicantFeedback.trim().length}).`,
       );
     }
     return issues;
@@ -333,7 +336,11 @@ export function VerdictReviewForm({
   ]);
 
   const autosaveDraft = useMemo(() => buildDraft(), [buildDraft]);
-  useReviewAutosave({ draft: autosaveDraft, onSave, readOnly });
+  const autosave = useReviewAutosave({
+    draft: autosaveDraft,
+    onSave,
+    readOnly,
+  });
 
   const complete = validationIssues.length === 0;
   const reviewedFiles = evidences.filter(
@@ -399,6 +406,13 @@ export function VerdictReviewForm({
 
   async function prepareSubmit() {
     if (!complete) {
+      setTask(
+        firstInvalidFieldId?.startsWith("verdict-gate")
+          ? "conditions"
+          : firstInvalidFieldId?.startsWith("verdict-feedback")
+            ? "report"
+            : "criteria",
+      );
       setError(validationIssues[0] ?? "Phiếu còn nội dung cần hoàn tất.");
       if (firstInvalidFieldId) {
         const criterion = rubric.criteria.find(
@@ -406,19 +420,19 @@ export function VerdictReviewForm({
             firstInvalidFieldId === `verdict-rationale-${key}` ||
             firstInvalidFieldId === `verdict-outcome-${key}`,
         );
-        if (criterion && criterion.key !== activeCriterionKey) {
-          setSelectedCriterion(criterion.key);
-          requestAnimationFrame(() =>
-            document.getElementById(firstInvalidFieldId)?.focus(),
-          );
-        } else {
-          document.getElementById(firstInvalidFieldId)?.focus();
-        }
+        if (criterion) setSelectedCriterion(criterion.key);
+        const gate = rubric.gates.find(
+          ({ key }) => firstInvalidFieldId === `verdict-gate-rationale-${key}`,
+        );
+        if (gate) setSelectedGate(gate.key);
+        requestAnimationFrame(() =>
+          document.getElementById(firstInvalidFieldId)?.focus(),
+        );
       }
       return;
     }
     try {
-      await onSave(buildDraft());
+      await autosave.save(buildDraft());
       setError("");
       setConfirmOpen(true);
     } catch {
@@ -435,7 +449,7 @@ export function VerdictReviewForm({
               Phiếu thẩm định
             </p>
             <h2 className="mt-1 text-xl font-bold sm:text-2xl">
-              Kết luận theo tiêu chí
+              Đánh giá từng tiêu chí
             </h2>
             <p className="mt-1 max-w-2xl text-sm leading-6 text-[var(--theme-muted)]">
               Kiểm tra tài liệu, ghi căn cứ cho từng tiêu chí rồi gửi kết quả.
@@ -479,19 +493,58 @@ export function VerdictReviewForm({
             </p>
           ) : null}
         </div>
-        <form className="mt-4 space-y-5">
-          <ReviewEvidenceAssessments
-            assessments={assessments}
-            evidences={evidences}
-            onChange={setAssessments}
-            readOnly={readOnly}
-          />
-
+        <TaskNavigation
+          label="Công việc thẩm định"
+          value={task}
+          onChange={setTask}
+          items={[
+            { id: "documents", label: "Kiểm tra tài liệu" },
+            ...(rubric.gates.length
+              ? [{ id: "conditions", label: "Điều kiện tiếp nhận" }]
+              : []),
+            { id: "criteria", label: "Đánh giá từng tiêu chí" },
+            { id: "report", label: "Báo cáo" },
+          ]}
+        />
+        <form
+          className="mt-4 space-y-5"
+          onSubmit={(event) => event.preventDefault()}
+        >
+          <div hidden={task !== "documents"}>
+            <ReviewEvidenceAssessments
+              assessments={assessments}
+              evidences={evidences}
+              onChange={setAssessments}
+              readOnly={readOnly}
+            />
+          </div>
           {rubric.gates.length ? (
-            <section className="space-y-3" aria-labelledby="review-conditions">
+            <section
+              hidden={task !== "conditions"}
+              className="space-y-3"
+              aria-labelledby="review-conditions"
+            >
               <h3 className="text-lg font-bold" id="review-conditions">
                 Điều kiện tiếp nhận
               </h3>
+              <label className="block text-sm font-semibold">
+                Chọn điều kiện tiếp nhận
+                <select
+                  className="mt-2 min-h-11 w-full rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3"
+                  value={selectedGate}
+                  onChange={(event) => setSelectedGate(event.target.value)}
+                >
+                  {rubric.gates.map((gate) => (
+                    <option key={gate.key} value={gate.key}>
+                      {gate.label} ·{" "}
+                      {gates[gate.key]?.outcome &&
+                      gates[gate.key]?.outcome !== "UNASSESSED"
+                        ? "Đã đánh giá"
+                        : "Chưa đánh giá"}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <div className="space-y-3">
                 {rubric.gates.map((gate) => {
                   const answer = gates[gate.key] ?? {
@@ -502,6 +555,7 @@ export function VerdictReviewForm({
                   return (
                     <fieldset
                       className="min-w-0 rounded-xl bg-[var(--theme-elevated)] p-4 sm:p-5"
+                      hidden={selectedGate !== gate.key}
                       disabled={readOnly}
                       key={gate.key}
                     >
@@ -575,7 +629,8 @@ export function VerdictReviewForm({
           ) : null}
 
           <section
-            className="grid min-w-0 gap-4 lg:grid-cols-[minmax(12rem,0.3fr)_minmax(0,1fr)]"
+            hidden={task !== "criteria"}
+            className="[&[hidden]]:hidden grid min-w-0 gap-4 lg:grid-cols-[minmax(12rem,0.3fr)_minmax(0,1fr)]"
             aria-labelledby="review-verdicts"
           >
             <div className="lg:col-span-2">
@@ -587,9 +642,26 @@ export function VerdictReviewForm({
                 dung đã nhập được giữ khi chuyển tiêu chí.
               </p>
             </div>
+            <label className="text-sm font-semibold lg:hidden">
+              Chọn tiêu chí đang đánh giá
+              <select
+                className="mt-2 min-h-11 w-full rounded-lg border border-[var(--theme-border)] bg-[var(--theme-surface)] px-3"
+                value={activeCriterionKey}
+                onChange={(event) => selectCriterion(event.target.value)}
+              >
+                {rubric.criteria.map((criterion, index) => (
+                  <option key={criterion.key} value={criterion.key}>
+                    {index + 1}. {criterion.label} ·{" "}
+                    {verdicts[criterion.key]?.outcome
+                      ? "Đã chọn kết luận"
+                      : "Chưa đánh giá"}
+                  </option>
+                ))}
+              </select>
+            </label>
             <nav
               aria-label="Tiến độ từng tiêu chí"
-              className="flex min-w-0 flex-wrap content-start gap-2 lg:sticky lg:top-24 lg:flex-col lg:self-start"
+              className="hidden min-w-0 flex-wrap content-start gap-2 lg:flex lg:sticky lg:top-24 lg:flex-col lg:self-start"
             >
               {rubric.criteria.map((criterion, index) => {
                 const answer = verdicts[criterion.key];
@@ -692,7 +764,7 @@ export function VerdictReviewForm({
                       <legend className="text-sm font-bold">
                         Chọn kết luận
                       </legend>
-                      <div className="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                      <div className="mt-2 grid gap-2 sm:grid-cols-2">
                         {outcomeOptions
                           .filter(
                             (option) =>
@@ -847,9 +919,67 @@ export function VerdictReviewForm({
           </section>
 
           <section
-            className="grid scroll-mt-24 gap-4 rounded-xl bg-[var(--theme-elevated)] p-4 sm:grid-cols-2 sm:p-5"
+            hidden={task !== "report"}
+            className="[&[hidden]]:hidden grid scroll-mt-24 gap-4 rounded-xl bg-[var(--theme-elevated)] p-4 sm:grid-cols-2 sm:p-5"
             id="review-final-result"
           >
+            <div className="sm:col-span-2">
+              <h3 className="text-lg font-bold">Tổng hợp thẩm định</h3>
+              <p className="mt-2 text-sm">
+                Đã hoàn tất {completedCriteria}/{rubric.criteria.length} tiêu
+                chí · Đã kiểm tra {reviewedFiles}/{evidences.length} tài liệu
+              </p>
+              <dl className="mt-3 grid grid-cols-2 gap-3 border-y border-[var(--theme-border)] py-3 sm:grid-cols-4">
+                {outcomeOptions
+                  .filter((option) => option.value !== "NOT_APPLICABLE")
+                  .map((option) => (
+                    <div key={option.value}>
+                      <dt className="text-xs text-[var(--theme-muted)]">
+                        {option.label}
+                      </dt>
+                      <dd className="mt-1 font-bold tabular-nums">
+                        {
+                          Object.values(verdicts).filter(
+                            (verdict) => verdict.outcome === option.value,
+                          ).length
+                        }
+                      </dd>
+                    </div>
+                  ))}
+              </dl>
+              <ul className="mt-3 space-y-2 text-sm">
+                {rubric.criteria.map((criterion) => (
+                  <li
+                    key={criterion.key}
+                    className="flex flex-wrap justify-between gap-2 border-b border-[var(--theme-border)] pb-2"
+                  >
+                    <button
+                      type="button"
+                      className="min-h-11 text-left font-semibold text-[var(--theme-accent)]"
+                      onClick={() => {
+                        setTask("criteria");
+                        selectCriterion(criterion.key);
+                      }}
+                    >
+                      {criterion.label}
+                    </button>
+                    <span>
+                      {outcomeOptions.find(
+                        (option) =>
+                          option.value === verdicts[criterion.key]?.outcome,
+                      )?.label ?? "Chưa đánh giá"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              {validationIssues.length ? (
+                <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-[var(--theme-muted)]">
+                  {validationIssues.map((issue) => (
+                    <li key={issue}>{issue}</li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
             <div
               className="border-l-2 border-[var(--theme-accent)] pl-4"
               role="status"
@@ -863,7 +993,7 @@ export function VerdictReviewForm({
             </div>
             <div>
               <label className="text-sm font-bold" htmlFor="verdict-feedback">
-                Phản hồi gửi người nộp
+                Nội dung gửi người nộp
               </label>
               <textarea
                 className="mt-2 min-h-24 w-full rounded-xl border bg-[var(--theme-surface)] p-3"
@@ -911,22 +1041,28 @@ export function VerdictReviewForm({
                 aria-live="polite"
                 className="flex items-center gap-2 text-xs font-semibold text-[var(--theme-muted)]"
                 data-testid="review-save-status"
-                role={saveError ? "alert" : "status"}
+                role={
+                  saveError || autosave.status === "error" ? "alert" : "status"
+                }
               >
                 {readOnly ? (
                   <>
                     <CheckCircle2 className="size-4" />
                     Kết quả đã gửi.
                   </>
-                ) : saveError ? (
+                ) : saveError || autosave.status === "error" ? (
                   <>
                     <AlertCircle className="size-4 text-red-700" />
                     Chưa lưu được bản nháp.
                   </>
-                ) : isSaving ? (
+                ) : isSaving ||
+                  autosave.status === "saving" ||
+                  autosave.status === "pending" ? (
                   <>
                     <LoaderCircle className="size-4 animate-spin" />
-                    Đang lưu thay đổi…
+                    {autosave.status === "pending"
+                      ? "Có thay đổi chưa lưu…"
+                      : "Đang lưu thay đổi…"}
                   </>
                 ) : (
                   <>
@@ -941,6 +1077,24 @@ export function VerdictReviewForm({
                   : `${validationIssues.length} mục còn lại trước khi gửi`}
               </p>
             </div>
+            {!readOnly ? (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isSaving || isSubmitting}
+                onClick={() =>
+                  void autosave
+                    .save(buildDraft())
+                    .catch(() =>
+                      setError("Chưa thể lưu phiếu. Vui lòng thử lại."),
+                    )
+                }
+              >
+                {saveError || autosave.status === "error"
+                  ? "Thử lưu lại"
+                  : "Lưu bản nháp"}
+              </Button>
+            ) : null}
             {!readOnly ? (
               <Button
                 disabled={isSaving || isSubmitting}

@@ -27,6 +27,7 @@ from app.modules.dossiers.models import (
     Category,
     Dossier,
     DossierStatus,
+    DossierStatusHistory,
     DossierVersion,
 )
 from app.modules.reviews.errors import (
@@ -222,6 +223,13 @@ def test_admin_can_list_and_open_dossiers_waiting_for_review() -> None:
         assert page.items[0].assignment_count == 0
         assert detail.snapshot_json == version.snapshot_json
         assert detail.canonical_hash == version.canonical_hash
+        assert detail.workflow_progress is not None
+        assert detail.workflow_progress["status"] == "UNDER_REVIEW"
+        assert (
+            detail.workflow_progress["submissionFeePolicyMode"]
+            == dossier.submission_fee_policy_mode
+        )
+        assert detail.workflow_progress["history"] == []
 
         with pytest.raises(ReviewForbiddenError):
             await service.list_admin_dossiers(
@@ -323,5 +331,50 @@ def test_assignment_rejects_wrong_scope_owner_nonreviewer_and_invalid_input() ->
 
         await service.close()
         await engine.dispose()
+
+    asyncio.run(exercise())
+
+
+def test_workflow_progress_preserves_fee_waiver_and_omits_private_history() -> None:
+    async def exercise() -> None:
+        service, sessions, engine, users, dossier, _ = await _setup()
+        try:
+            async with sessions() as session, session.begin():
+                stored = await session.get(Dossier, dossier.id)
+                assert stored is not None
+                stored.submission_fee_policy_mode = "DYNAMIC"
+                stored.submission_fee_waived_at = NOW
+                stored.submission_fee_snapshot = {
+                    "waiverReason": "TEST_SUBMISSION_FEE_EXEMPTION"
+                }
+                session.add(
+                    DossierStatusHistory(
+                        dossier_id=dossier.id,
+                        from_status=DossierStatus.PRECHECK,
+                        to_status=DossierStatus.UNDER_REVIEW,
+                        actor_user_id=users["admin"].id,
+                        note="Internal note must not be exposed",
+                        reason_code="PRECHECK_PASSED",
+                        created_at=NOW,
+                    )
+                )
+            detail = await service.get_admin_dossier(
+                _principal(users["admin"], "SUPER_ADMIN"), dossier.id
+            )
+            from app.modules.dossiers.schemas import DossierWorkflowProgressData
+
+            progress = DossierWorkflowProgressData.model_validate(
+                detail.workflow_progress
+            )
+            assert progress.submission_fee_policy_mode == "DYNAMIC"
+            assert progress.submission_fee_test_exempted is True
+            assert progress.submission_fee_paid_at is None
+            assert progress.submission_fee_waived_at is not None
+            assert len(progress.history) == 1
+            assert progress.history[0].note is None
+            assert "actorUserId" not in progress.history[0].model_dump(by_alias=True)
+        finally:
+            await service.close()
+            await engine.dispose()
 
     asyncio.run(exercise())

@@ -20,7 +20,7 @@ const labels: Record<DossierStatus, string> = {
   APPROVED: "Đã phê duyệt",
   REJECTED: "Bị từ chối",
   PAYMENT_PENDING: "Chờ thanh toán",
-  PAID: "Đã thanh toán",
+  PAID: "Đã hoàn tất nghĩa vụ phí",
   ANCHOR_PENDING: "Đang chuẩn bị bằng xác lập",
   ANCHORED: "Sẵn sàng phát hành",
   CERTIFICATE_ISSUED: "Đã phát hành bằng xác lập",

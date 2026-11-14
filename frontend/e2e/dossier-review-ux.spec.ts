@@ -93,38 +93,13 @@ test("reviewer sees live progress and the next blocking action", async ({
   await page.goto("/reviews", { waitUntil: "domcontentloaded" });
   await page.getByRole("link", { name: "Tiếp tục thẩm định" }).click();
   await expect(page.getByText("Đã quá hạn xử lý")).toBeVisible();
+  await page
+    .getByRole("button", { name: "Tài liệu hồ sơ", exact: true })
+    .click();
   await expect(
     page.getByRole("heading", { name: "Tài liệu kiểm chứng (1)" }),
   ).toBeVisible();
   await expect(page.getByText("Tóm tắt của người nộp")).toBeVisible();
-  await expect(
-    page.getByRole("link", { name: "Phiếu thẩm định" }),
-  ).toHaveAttribute("href", "#review-scorecard");
-  await expect(
-    page.getByRole("status").filter({ hasText: "Tiếp theo:" }),
-  ).toBeVisible();
-  const reviewLayout = await page
-    .locator("#review-form")
-    .evaluate((element) => {
-      const evidence = element
-        .querySelector("#review-evidence")!
-        .getBoundingClientRect();
-      const scorecard = element
-        .querySelector("#review-scorecard")!
-        .getBoundingClientRect();
-      return {
-        evidenceBottom: evidence.bottom,
-        evidenceWidth: evidence.width,
-        scorecardTop: scorecard.top,
-        scorecardWidth: scorecard.width,
-      };
-    });
-  expect(reviewLayout.scorecardTop).toBeGreaterThanOrEqual(
-    reviewLayout.evidenceBottom - 2,
-  );
-  expect(reviewLayout.scorecardWidth).toBeGreaterThanOrEqual(
-    reviewLayout.evidenceWidth * 0.95,
-  );
   await page
     .getByRole("button", { name: "Xem Bằng chứng về quyền sử dụng nhãn hiệu" })
     .click();
@@ -134,13 +109,19 @@ test("reviewer sees live progress and the next blocking action", async ({
     }),
   ).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: "Kết luận theo tiêu chí" }),
-  ).toBeVisible();
-  await expect(page.getByText("Kết luận từng tiêu chí")).toBeVisible();
-  await expect(page.getByText("0/5 tiêu chí hoàn tất")).toHaveCount(0);
-  await expect(
     page.getByText(
       "Loại tài liệu: Tài liệu về quyền sử dụng hoặc đại diện nhãn hiệu",
     ),
   ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Phiếu thẩm định", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Đánh giá từng tiêu chí", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Đánh giá từng tiêu chí" }),
+  ).toBeVisible();
+  await expect(page.getByText("Kết luận từng tiêu chí")).toBeVisible();
+  await expect(page.getByText("0/5 tiêu chí hoàn tất")).toHaveCount(0);
 });

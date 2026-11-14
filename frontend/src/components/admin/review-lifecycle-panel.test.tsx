@@ -111,6 +111,9 @@ describe("ReviewLifecyclePanel", () => {
     );
 
     expect(screen.getByText("Bước 1 · Giao người kiểm duyệt")).toBeTruthy();
+    await user.click(
+      screen.getByRole("button", { name: "Phân công người thẩm định" }),
+    );
     await screen.findByRole("option", { name: "specialist@cns.vn" });
     await user.selectOptions(
       screen.getByLabelText("Người kiểm duyệt"),
