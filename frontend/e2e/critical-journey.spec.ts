@@ -117,11 +117,11 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
         sameSite: "Lax",
       },
     ]);
-    await page.goto("/reviews");
-    await page.getByRole("link", { name: "Tiếp tục thẩm định" }).click();
+    await page.goto("/reviews/4155dbf5-bb3e-449d-8bf0-9572cc642cac");
     await page
       .getByLabel("Kết quả kiểm tra Bằng chứng về quyền sử dụng nhãn hiệu")
       .selectOption("VALID");
+    await page.getByRole("button", { name: "Đánh giá từng tiêu chí" }).click();
     const criteria = [
       "Căn cứ quyền sử dụng nhãn hiệu",
       "Thông tin nhất quán",
@@ -144,6 +144,7 @@ test("critical MVP journey reaches a publicly verifiable certificate", async ({
         await page.getByRole("button", { name: "Tiêu chí tiếp theo" }).click();
       }
     }
+    await page.getByRole("button", { name: "Báo cáo" }).click();
     await expect(
       page.locator("#review-final-result").getByText("Đề nghị phê duyệt"),
     ).toBeVisible();

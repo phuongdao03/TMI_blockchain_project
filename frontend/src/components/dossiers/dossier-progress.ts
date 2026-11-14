@@ -39,6 +39,16 @@ export function dossierProgress(input: ProgressInput) {
         submissionFeePaidAt ||
         submissionFeeWaivedAt,
     );
+  const legacyFeePaid =
+    !modern &&
+    [
+      "PAID",
+      "ANCHOR_PENDING",
+      "ANCHORED",
+      "CERTIFICATE_ISSUED",
+      "PUBLISHED",
+      "REVOKED",
+    ].includes(status);
   const preparation: Stage = {
     key: "preparation",
     label: "Chuẩn bị hồ sơ",
@@ -98,6 +108,7 @@ export function dossierProgress(input: ProgressInput) {
       stage.key === "fee"
         ? (submissionFeePaidAt ?? submissionFeeWaivedAt)
         : null;
+    const legacyFeeComplete = stage.key === "fee" && legacyFeePaid;
     const finalEvent =
       stage.key === "publication" && status === "PUBLISHED"
         ? history.find((item) => item.toStatus === "PUBLISHED")
@@ -109,6 +120,7 @@ export function dossierProgress(input: ProgressInput) {
     const complete = Boolean(
       exit ||
         settledAt ||
+        legacyFeeComplete ||
         finalEvent ||
         issued ||
         (stage.key === "publication" && status === "PUBLISHED"),
@@ -128,6 +140,10 @@ export function dossierProgress(input: ProgressInput) {
               : "pending",
       completedAt:
         settledAt ??
+        (legacyFeeComplete
+          ? (history.find((item) => item.toStatus === "PAID")?.createdAt ??
+            null)
+          : null) ??
         issued?.createdAt ??
         finalEvent?.createdAt ??
         exit?.createdAt ??
@@ -139,10 +155,12 @@ export function dossierProgress(input: ProgressInput) {
             : "Được miễn phí"
           : stage.key === "fee" && submissionFeePaidAt
             ? "Đã thanh toán"
-            : stage.key === current.key &&
-                (stopped || status === "NEEDS_SUPPLEMENT")
-              ? (last?.note ?? null)
-              : null,
+            : legacyFeeComplete
+              ? "Đã thanh toán"
+              : stage.key === current.key &&
+                  (stopped || status === "NEEDS_SUPPLEMENT")
+                ? (last?.note ?? null)
+                : null,
     };
   });
   const next =

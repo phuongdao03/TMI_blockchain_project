@@ -98,8 +98,14 @@ test("admin charges a funded wallet and applicant sees fee confirmation", async 
   const applicantPage = await context.newPage();
   await applicantPage.goto(`/dossiers/${dossierId}`);
   await expect(
-    applicantPage.getByText("Thanh toán đã được xác nhận"),
+    applicantPage.getByText("Khoản phí đã được xác nhận."),
   ).toBeVisible();
+  await applicantPage.getByText("Xem toàn bộ tiến độ").click();
+  const legacyFeeStage = applicantPage
+    .locator("#dossier-publication-progress li")
+    .filter({ hasText: "Hoàn tất lệ phí" });
+  await expect(legacyFeeStage).toContainText("Đã hoàn tất");
+  await expect(legacyFeeStage).toContainText("Đã thanh toán");
 
   await applicantPage.goto(`/payments/${paymentOrderId}`);
   await expect(

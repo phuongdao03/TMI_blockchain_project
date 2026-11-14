@@ -186,3 +186,16 @@ it("does not reorder a historical payment made after review", () => {
     progress.stages.find((stage) => stage.key === "fee")?.completedAt,
   ).toBe("2026-10-03T00:00:00Z");
 });
+
+it("completes a legacy fee stage from the paid dossier state", () => {
+  const progress = dossierProgress({
+    status: "PAID",
+    submissionFeePolicyMode: "LEGACY",
+    history: [],
+  });
+
+  expect(progress.modern).toBe(false);
+  expect(progress.stages.find((stage) => stage.key === "fee")?.state).toBe(
+    "complete",
+  );
+});

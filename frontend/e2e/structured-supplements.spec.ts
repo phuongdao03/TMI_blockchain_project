@@ -79,6 +79,7 @@ test("criterion request reaches owner response and staff resolution with history
   );
   const reviewerPath = "/reviews/4155dbf5-bb3e-449d-8bf0-9572cc642cac";
   await page.goto(reviewerPath);
+  await page.getByRole("button", { name: "Bổ sung và phối hợp" }).click();
   let panel = page.getByRole("region", { name: "Yêu cầu bổ sung có cấu trúc" });
   await panel.getByText("Tạo yêu cầu bổ sung theo tiêu chí").click();
   await panel
@@ -132,6 +133,7 @@ test("criterion request reaches owner response and staff resolution with history
   await expect(panel.getByText("Đã phản hồi, chờ kiểm tra")).toBeVisible();
   await setRole("reviewer");
   await page.goto(reviewerPath);
+  await page.getByRole("button", { name: "Bổ sung và phối hợp" }).click();
   panel = page.getByRole("region", { name: "Yêu cầu bổ sung có cấu trúc" });
   const resolution =
     "Đã đối chiếu tư liệu và giải trình; yêu cầu đã được xử lý.";
